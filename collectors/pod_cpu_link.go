@@ -3,7 +3,7 @@
 package collectors
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+        "math"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -28,29 +29,28 @@ func init() {
 	register(kubepodcpu, disabled, createKubepodCPUCollector)
 }
 
-//cpuManagerCheckpoint is the structure needed to extract the default cpuSet information from the kubelet checkpoint file
-type cpuManagerCheckpoint struct {
-	DefaultCPUSet string "json:\"defaultCpuSet\""
-}
-
-//readDefaultSet extracts the information about the "default" set of cpus available to kubernetes
-func readDefaultSet() string {
-	if isSymLink(*cpuCheckPointFile) {
-		log.Printf("error: cannot read symlink %v", *cpuCheckPointFile)
-		return ""
+//isPartialCore returns true if the pod has full gauanteed core(s) pinned to it
+func isPartialCore(podUID string) bool {
+        cpuShares := filepath.Join("/sys/fs/cgroup/cpu,cpuacct/kubepods",podUID,"cpu.shares")
+	if isSymLink(cpuShares) {
+		log.Printf("error: cannot read symlink %v", cpuShares)
+		return true
 	}
-	cpuRaw, err := ioutil.ReadFile(*cpuCheckPointFile)
+	cpuRaw, err := ioutil.ReadFile(cpuShares)
 	if err != nil {
-		log.Printf("cpu checkpoint file can not be read: %v", err)
-		return ""
+		log.Printf("cpu shares file can not be read: %v", err)
+		return true
 	}
-	checkpointFile := cpuManagerCheckpoint{}
-	err = json.Unmarshal(cpuRaw, &checkpointFile)
-	if err != nil {
-		log.Printf("cpu checkpoint file can not be read: %v", err)
-		return ""
-	}
-	return checkpointFile.DefaultCPUSet
+        stringcpu := strings.TrimSpace(string(cpuRaw))
+        floatcpu, err := strconv.ParseFloat(stringcpu, 64)
+        if err != nil{
+           	log.Print(err)
+        }
+        modulus := math.Remainder(floatcpu,1024)
+        if modulus == 0 {
+		return false
+        }
+	return true
 }
 
 //kubepodCPUCollector holds a static representation of node cpu topology and uses it to update information about kubernetes pod cpu usage.
@@ -104,7 +104,6 @@ func (c kubepodCPUCollector) guaranteedPodCPUs() ([]podCPULink, error) {
 		log.Fatal("Fatal error: Cannot get information on Kubernetes CPU usage", err)
 	}
 	kubeCpus, err := parseCPURange(kubeCPUString)
-	defaultSet := readDefaultSet()
 	if err != nil {
 		//Exporter killed here as CPU collector can not work without this information.
 		log.Fatal("Fatal error: Cannot get information on Kubernetes CPU usage", err)
@@ -143,7 +142,7 @@ func (c kubepodCPUCollector) guaranteedPodCPUs() ([]podCPULink, error) {
 						if err != nil {
 							return links, err
 						}
-						if cpuSetDesc == kubeCPUString || cpuSetDesc == defaultSet {
+						if isPartialCore(f.Name()) {
 							continue
 						}
 						for _, c := range cpuList {
