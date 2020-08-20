@@ -1,0 +1,6 @@
+## CPU usage per pod
+
+The below query will return the name and namespace of every guaranteed pod linked to specific cpu usage:
+`sriov_kubepodcpu * on (uid) group_left(pod,namespace)  kube_pod_info`
+kube_pod_info here is a metric supplied by the kube-state-metrics project.
+
