@@ -1,14 +1,16 @@
 module sriov-network-metrics-exporter
 
-go 1.13
+go 1.15
 
 require (
 	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/prometheus/client_golang v1.5.1
 	github.com/prometheus/procfs v0.0.11 // indirect
-	golang.org/x/net v0.0.0-20200625001655-4c5254603344 // indirect
-	golang.org/x/sys v0.0.0-20200420163511-1957bb5e6d1f // indirect
+	github.com/vishvananda/netlink v1.1.1-0.20201019193756-fb953eb4ceb2
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
+	golang.org/x/sys v0.0.0-20201029080932-201ba4db2418 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto v0.0.0-20200420144010-e5e8543f8aeb // indirect
 	google.golang.org/grpc v1.28.1 // indirect
 	k8s.io/api v1.17.1 // indirect
