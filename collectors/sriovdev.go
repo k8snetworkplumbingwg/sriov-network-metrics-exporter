@@ -22,6 +22,7 @@ const (
 var (
 	sysBusPci             = flag.String("path.sysbuspci", "/sys/bus/pci/devices", "Path to sys/bus/pci on host")
 	sysClassNet           = flag.String("path.sysclassnet", "/sys/class/net/", "Path to sys/class/net on host")
+	netlinkEnabled        = flag.Bool("collector.netlink", true, "Enable or disable use of netlink for VF stats collection in favor of driver specific collectors.")
 	totalVfFile           = "sriov_totalvfs"
 	pfNameFile            = "/net"
 	netClassFile          = "/class"
@@ -92,7 +93,7 @@ func (c sriovdevCollector) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 		// appropriate reader for VF is returned based on the PF.
-		// TODO: This could be cached per PF.
+		//This reader may also be the moment for reading the stats from each device as in the netlink reader.
 		reader := statReaderForPF(pfName)
 		if reader == nil {
 			continue
@@ -112,7 +113,7 @@ func (c sriovdevCollector) Collect(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(
 					desc,
 					prometheus.CounterValue,
-					v,
+					float64(v),
 					pfName,
 					id,
 					address,
@@ -207,7 +208,6 @@ func vfList(pfAddress string) (vfWithRoot, error) {
 			}
 		}
 	}
-
 	return vfList, nil
 }
 

@@ -8,15 +8,21 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sriov-network-metrics-exporter/pkg/vfStats"
 	"strconv"
 	"strings"
 )
 
-type sriovStats map[string]float64
+type sriovStats map[string]int64
 
 //sriovStatReader is an interface which takes in the Physical Function name and vf id and returns the stats for the VF
 type sriovStatReader interface {
 	ReadStats(vfID string, pfName string) sriovStats
+}
+
+//netlinkReader is able to read stats from drivers that support the netlink interface
+type netlinkReader struct {
+	data vfStats.PerPF
 }
 
 //i40eReader is able to read stats from Physical Functions running the i40e driver.
@@ -27,6 +33,10 @@ type i40eReader struct {
 //statReaderForPF returns the correct stat reader for the given PF
 //currently only i40e is implemented, but other drivers can be implemented and picked up here.
 func statReaderForPF(pf string) sriovStatReader {
+	if *netlinkEnabled {
+		return netlinkReader{
+			vfStats.VfStats(pf)}
+	}
 	pfDriverPath := filepath.Join(*sysClassNet, pf, "device", driverFile)
 	//driver type is found by getting the destination of the symbolic link on the driver path from /sys/bus/pci
 	driverInfo, err := os.Readlink(pfDriverPath)
@@ -64,7 +74,7 @@ func (r i40eReader) ReadStats(pfName string, vfID string) sriovStats {
 			continue
 		}
 		statString := strings.TrimSpace(string(statRaw))
-		value, err := strconv.ParseFloat(statString, 64)
+		value, err := strconv.ParseInt(statString, 10, 64)
 		if err != nil {
 			log.Printf("Error reading file %v: %v", f.Name(), err)
 			continue
@@ -72,4 +82,25 @@ func (r i40eReader) ReadStats(pfName string, vfID string) sriovStats {
 		stats[f.Name()] = value
 	}
 	return stats
+}
+
+func (r netlinkReader) ReadStats(pfName string, vfID string) sriovStats {
+	id, err := strconv.Atoi(vfID)
+	if err != nil {
+		log.Print("Error reading passed Virtual Function ID")
+		return sriovStats{}
+	}
+	return func() sriovStats {
+		vf := r.data.Vfs[id]
+		return map[string]int64{
+			"tx_bytes":   int64(vf.TxBytes),
+			"rx_bytes":   int64(vf.RxBytes),
+			"tx_packets": int64(vf.TxPackets),
+			"rx_packets": int64(vf.RxPackets),
+			"tx_dropped": int64(vf.TxDropped),
+			"rx_dropped": int64(vf.RxDropped),
+			"rx_broadcast": int64(vf.Broadcast),
+			"rx_multicast": int64(vf.Multicast),
+		}
+	}()
 }
