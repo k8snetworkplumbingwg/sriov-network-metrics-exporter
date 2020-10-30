@@ -1,6 +1,5 @@
-//kubepodCPUCollector is a Kubernetes focused collector that exposes information about CPUs linked to specific Kubernetes pods through the CPU Manager component in Kubelet
-
 package collectors
+//kubepodCPUCollector is a Kubernetes focused collector that exposes information about CPUs linked to specific Kubernetes pods through the CPU Manager component in Kubelet
 
 import (
 	"encoding/json"
