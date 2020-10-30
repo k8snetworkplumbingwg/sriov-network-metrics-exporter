@@ -6,8 +6,11 @@ The SR-IOV Network Metrics Exporter is designed with the Kubernetes SR-IOV stack
 **This software is a pre-production alpha version and should not be deployed to production servers.**
 
 ## Hardware support
-This exporter is compatible with Intel® 700 series NICs using and i40e driver of 2.10 or above. To check your current driver version run: ``modinfo i40e | grep ^version``
+The default netlink implementation for Virtual Function telemetry relies on driver support and a kernel version of 4.4 or higher. This version requires i40e driver of 2.11+ for Intel® 700 series NICs. Updated i40e drivers can be fould at the [Intel Download Center](https://downloadcenter.intel.com/download/24411/Intel-Network-Adapter-Driver-for-PCIe-40-Gigabit-Ethernet-Network-Connections-under-Linux-?v=t)
+
+For kernels older than 4.4 a driver specific collector is enabled which is compatible with Intel® 700 series NICs using and i40e driver of 2.11 or above. To check your current driver version run: ``modinfo i40e | grep ^version``
 To upgrade visit the [official driver download site](https://downloadcenter.intel.com/download/24411/Intel-Network-Adapter-Driver-for-PCIe-40-Gigabit-Ethernet-Network-Connections-Under-Linux-).
+To use this version the flag collector.netlink must be set to "false".
 
 ## Metrics
 This exporter will make the following metrics available:
@@ -137,9 +140,10 @@ A number of configuration flags can be passed to the SR-IOV Network Metrics Expo
 
 | Flag | Type | Description | Default Value |
 |----|:----|:----|:----|
-| collector.kubepodcpu | boolean | Enables the kubepodcpu collector | true|
+| collector.kubepodcpu | boolean | Enables the kubepodcpu collector | false |
 | collector.kubepoddevice | boolean | Enables the kubepoddevice collector | false |
-| collector.vfstats | boolean |Enables the vfstats collector |  false |
+| collector.vfstats | boolean |Enables the vfstats collector |  true |
+| collector.netlink | boolean |Enables using netlink for vfstats collection |  true |
 | path.cpucheckpoint | string | Path for location of cpu manager checkpoint file | /var/lib/kubelet/cpu_manager_state |
 | path.kubecgroup |string | Path for location of kubernetes cgroups on the host system | /sys/fs/cgroup/cpuset/kubepods/|
 | path.kubeletSocket | string | Path to kubelet resources socket | /var/lib/kubelet/pod-resources/kubelet.sock |

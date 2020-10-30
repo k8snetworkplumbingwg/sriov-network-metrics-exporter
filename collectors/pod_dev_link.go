@@ -1,5 +1,5 @@
-//pod_dev_link publishes which devices are connected to which pods in Kubernetes by querying the Kubelet api
 package collectors
+//pod_dev_link publishes which devices are connected to which pods in Kubernetes by querying the Kubelet api
 
 import (
 	"context"

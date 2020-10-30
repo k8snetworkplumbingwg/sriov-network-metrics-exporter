@@ -20,18 +20,18 @@ var (
 	allCollectors      = make(map[string]func() prometheus.Collector)
 )
 
-//sriovCollector registers the collectors used for specific data and exposes a Collect method to gather the data
-type sriovCollector []prometheus.Collector
+//SriovCollector registers the collectors used for specific data and exposes a Collect method to gather the data
+type SriovCollector []prometheus.Collector
 
 //Collect metrics from all enabled collectors in unordered sequence.
-func (s sriovCollector) Collect(ch chan<- prometheus.Metric) {
+func (s SriovCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, collector := range s {
 		collector.Collect(ch)
 	}
 }
 
 //Describe each collector in unordered sequence
-func (s sriovCollector) Describe(ch chan<- *prometheus.Desc) {
+func (s SriovCollector) Describe(ch chan<- *prometheus.Desc) {
 	for _, collector := range s {
 		collector.Describe(ch)
 	}
@@ -45,8 +45,8 @@ func register(name string, isDefault bool, collector func() prometheus.Collector
 	flag.BoolVar(enabledCollectors[name], "collector."+name, isDefault, fmt.Sprintf("Enables the %v collector", name))
 }
 
-//Enabled adds collectors enabled by default or command line flag to an sriovCollector object
-func Enabled() sriovCollector {
+//Enabled adds collectors enabled by default or command line flag to an SriovCollector object
+func Enabled() SriovCollector {
 	collectors := make([]prometheus.Collector, 0)
 	for k, v := range enabledCollectors {
 		if v != nil && *v {

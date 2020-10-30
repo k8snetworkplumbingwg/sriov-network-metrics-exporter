@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sriov-network-metrics-exporter/pkg/vfStats"
+	"sriov-network-metrics-exporter/pkg/vfstats"
 	"strconv"
 	"strings"
 )
@@ -22,7 +22,7 @@ type sriovStatReader interface {
 
 //netlinkReader is able to read stats from drivers that support the netlink interface
 type netlinkReader struct {
-	data vfStats.PerPF
+	data vfstats.PerPF
 }
 
 //i40eReader is able to read stats from Physical Functions running the i40e driver.
@@ -35,7 +35,7 @@ type i40eReader struct {
 func statReaderForPF(pf string) sriovStatReader {
 	if *netlinkEnabled {
 		return netlinkReader{
-			vfStats.VfStats(pf)}
+			vfstats.VfStats(pf)}
 	}
 	pfDriverPath := filepath.Join(*sysClassNet, pf, "device", driverFile)
 	//driver type is found by getting the destination of the symbolic link on the driver path from /sys/bus/pci

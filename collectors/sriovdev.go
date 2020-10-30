@@ -1,5 +1,5 @@
-//sriovDev has the methods for implementing an sriov stats reader and publishing its information to Prometheus
 package collectors
+//sriovDev has the methods for implementing an sriov stats reader and publishing its information to Prometheus
 
 import (
 	"errors"
