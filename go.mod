@@ -6,7 +6,7 @@ require (
 	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/prometheus/client_golang v1.5.1
 	github.com/prometheus/procfs v0.0.11 // indirect
-	github.com/vishvananda/netlink v1.1.1-0.20201019193756-fb953eb4ceb2
+	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
 	golang.org/x/sys v0.0.0-20201029080932-201ba4db2418 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
