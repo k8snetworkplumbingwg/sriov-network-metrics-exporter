@@ -15,7 +15,10 @@ type PerPF struct {
 func VfStats(pf string) PerPF {
 	log.Printf("PerPF called for %v", pf)
 	output := PerPF{pf, make(map[int]netlink.VfInfo)}
-	lnk, _ := netlink.LinkByName(pf)
+	lnk, err := netlink.LinkByName(pf)
+	if err != nil{
+		return output
+	}
 	for _, vf := range lnk.Attrs().Vfs {
 		output.Vfs[vf.ID] = vf
 	}
