@@ -94,8 +94,11 @@ In order to expose these metrics to Prometheus we need to configure the database
 ```
 The above should be added to the Prometheus configuration as a new target. For more about configuring Prometheus see the [official guide.](https://prometheus.io/docs/prometheus/latest/configuration/configuration/) Once Prometheus is started with this included in its config sriov-metrics should appear on the "Targets page". Metrics should be available by querying the Prometheus API or in the web interface.
 
-In this mode it will serve stats at 
-### Standalone installation to an endpoint on the host. To run as standalone the SR-IOV Metrics exporter will have to be run on each host in the cluster.
+In this mode it will serve stats on an endpoint inside the cluster. Prometheus will detect the label on the service endpoint throught the above configuration.
+
+### Standalone installation to an endpoint on the host. 
+
+To run as standalone the SR-IOV Metrics exporter will have to be run on each host in the cluster.
 Go 1.14+ is required to build the exporter. 
 Run:
 ```make build```
