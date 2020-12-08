@@ -102,13 +102,11 @@ func (c kubepodCPUCollector) guaranteedPodCPUs() ([]podCPULink, error) {
 		//Exporter killed here as CPU collector can not work without this information.
 		log.Fatal("Fatal error: Cannot get information on Kubernetes CPU usage", err)
 	}
-	kubeCpus, err := parseCPURange(kubeCPUString)
 	defaultSet := readDefaultSet()
 	if err != nil {
 		//Exporter killed here as CPU collector can not work without this information.
 		log.Fatal("Fatal error: Cannot get information on Kubernetes CPU usage", err)
 	}
-	c.kubeCPUs = kubeCpus
 	links := make([]podCPULink, 0)
 	files, err := ioutil.ReadDir(*kubePodCgroupPath)
 	if err != nil {
