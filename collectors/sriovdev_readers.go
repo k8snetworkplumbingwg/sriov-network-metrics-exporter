@@ -25,17 +25,18 @@ type netlinkReader struct {
 	data vfstats.PerPF
 }
 
-//i40eReader is able to read stats from Physical Functions running the i40e driver.
-type i40eReader struct {
+//statsReader is able to read stats from Physical Functions running the i40e or ice driver.
+//other drivers that store all VF stats in files under one folder could use this reader.
+type statsReader struct {
 	statsFS string
 }
 
 //statReaderForPF returns the correct stat reader for the given PF
-//currently only i40e is implemented, but other drivers can be implemented and picked up here.
+//currently only i40e and ice are implemented, but other drivers can be implemented and picked up here.
 func statReaderForPF(pf string) sriovStatReader {
 	if *netlinkEnabled {
-		return netlinkReader{
-			vfstats.VfStats(pf)}
+		log.Printf("using netlink for %v", pf)
+		return netlinkReader{vfstats.VfStats(pf)}
 	}
 	pfDriverPath := filepath.Join(*sysClassNet, pf, "device", driverFile)
 	//driver type is found by getting the destination of the symbolic link on the driver path from /sys/bus/pci
@@ -47,7 +48,11 @@ func statReaderForPF(pf string) sriovStatReader {
 	pfDriver := filepath.Base(driverInfo)
 	switch pfDriver {
 	case "i40e":
-		return i40eReader{filepath.Join(*sysClassNet, "/%s/device/sriov/%s/stats/")}
+		log.Printf("using %v reader for %v", pfDriver, pf)
+		return statsReader{filepath.Join(*sysClassNet, "/%s/device/sriov/%s/stats/")}
+	case "ice":
+		log.Printf("using %v reader for %v", pfDriver, pf)
+		return statsReader{filepath.Join(*sysClassNet, "/%sv%s/statistics/")}
 	default:
 		log.Printf("No stats reader available for Physical Function %v", pf)
 		return nil
@@ -55,7 +60,28 @@ func statReaderForPF(pf string) sriovStatReader {
 }
 
 //ReadStats takes in the name of a PF and the VF Id and returns a stats object.
-func (r i40eReader) ReadStats(pfName string, vfID string) sriovStats {
+func (r netlinkReader) ReadStats(pfName string, vfID string) sriovStats {
+	id, err := strconv.Atoi(vfID)
+	if err != nil {
+		log.Print("Error reading passed Virtual Function ID")
+		return sriovStats{}
+	}
+	return func() sriovStats {
+		vf := r.data.Vfs[id]
+		return map[string]int64{
+			"tx_bytes":   int64(vf.TxBytes),
+			"rx_bytes":   int64(vf.RxBytes),
+			"tx_packets": int64(vf.TxPackets),
+			"rx_packets": int64(vf.RxPackets),
+			"tx_dropped": int64(vf.TxDropped),
+			"rx_dropped": int64(vf.RxDropped),
+			"rx_broadcast": int64(vf.Broadcast),
+			"rx_multicast": int64(vf.Multicast),
+		}
+	}()
+}
+
+func (r statsReader) ReadStats(pfName string, vfID string) sriovStats {
 	stats := make(sriovStats, 0)
 	statroot := fmt.Sprintf(r.statsFS, pfName, vfID)
 	files, err := ioutil.ReadDir(statroot)
@@ -82,25 +108,4 @@ func (r i40eReader) ReadStats(pfName string, vfID string) sriovStats {
 		stats[f.Name()] = value
 	}
 	return stats
-}
-
-func (r netlinkReader) ReadStats(pfName string, vfID string) sriovStats {
-	id, err := strconv.Atoi(vfID)
-	if err != nil {
-		log.Print("Error reading passed Virtual Function ID")
-		return sriovStats{}
-	}
-	return func() sriovStats {
-		vf := r.data.Vfs[id]
-		return map[string]int64{
-			"tx_bytes":   int64(vf.TxBytes),
-			"rx_bytes":   int64(vf.RxBytes),
-			"tx_packets": int64(vf.TxPackets),
-			"rx_packets": int64(vf.RxPackets),
-			"tx_dropped": int64(vf.TxDropped),
-			"rx_dropped": int64(vf.RxDropped),
-			"rx_broadcast": int64(vf.Broadcast),
-			"rx_multicast": int64(vf.Multicast),
-		}
-	}()
 }
