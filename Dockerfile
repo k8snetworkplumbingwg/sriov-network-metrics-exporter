@@ -2,7 +2,7 @@ FROM golang:alpine as builder
 
 ENV HTTP_PROXY $http_proxy
 ENV HTTPS_PROXY $https_proxy
-RUN apk add --update --virtual build-dependencies build-base linux-headers
+RUN apk add --update --virtual build-dependencies build-base linux-headers git
 ADD ./ /usr/src/sriov-network-metrics-exporter
 RUN cd /usr/src/sriov-network-metrics-exporter && make clean && make build
 
