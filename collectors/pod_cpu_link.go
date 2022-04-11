@@ -1,4 +1,5 @@
 package collectors
+
 //kubepodCPUCollector is a Kubernetes focused collector that exposes information about CPUs linked to specific Kubernetes pods through the CPU Manager component in Kubelet
 
 import (
@@ -54,9 +55,8 @@ func readDefaultSet() string {
 
 //kubepodCPUCollector holds a static representation of node cpu topology and uses it to update information about kubernetes pod cpu usage.
 type kubepodCPUCollector struct {
-	cpuInfo  map[string]string
-	kubeCPUs []string
-	name     string
+	cpuInfo map[string]string
+	name    string
 }
 
 //podCPULink contains the information about the pod and container a single cpu is attached to
@@ -102,25 +102,22 @@ func (c kubepodCPUCollector) guaranteedPodCPUs() ([]podCPULink, error) {
 		//Exporter killed here as CPU collector can not work without this information.
 		log.Fatal("Fatal error: Cannot get information on Kubernetes CPU usage", err)
 	}
-	kubeCpus, err := parseCPURange(kubeCPUString)
 	defaultSet := readDefaultSet()
 	if err != nil {
 		//Exporter killed here as CPU collector can not work without this information.
 		log.Fatal("Fatal error: Cannot get information on Kubernetes CPU usage", err)
 	}
-	c.kubeCPUs = kubeCpus
 	links := make([]podCPULink, 0)
 	files, err := ioutil.ReadDir(*kubePodCgroupPath)
 	if err != nil {
 		return links, fmt.Errorf("could not open path kubePod cgroups")
 	}
+	fileRE := regexp.MustCompile("pod[0-9a-f]{8}-[0-9a-f]*")
+	cpuSetFileRE := regexp.MustCompile("[a-z0-9]{20,}")
 	for _, f := range files {
 		if f.IsDir() {
 			//Searching for files matching uuid pattern of 8-4-4-4-12
-			if matches, err := regexp.MatchString("pod[0-9a-f]{8}-[0-9a-f]*", f.Name()); matches {
-				if err != nil {
-					return links, fmt.Errorf("could not open cpu files: %v", err)
-				}
+			if matches := fileRE.MatchString(f.Name()); matches {
 				if len(f.Name()) < 4 {
 					continue
 				}
@@ -130,10 +127,7 @@ func (c kubepodCPUCollector) guaranteedPodCPUs() ([]podCPULink, error) {
 					return links, fmt.Errorf("could not open cpu files: %v", err)
 				}
 				for _, cpusetFile := range containerFiles {
-					if matches, err := regexp.MatchString("[a-z0-9]{20,}", cpusetFile.Name()); matches {
-						if err != nil {
-							return links, fmt.Errorf("could not open cpu files: %v: %v", cpusetFile.Name(), err)
-						}
+					if matches := cpuSetFileRE.MatchString(cpusetFile.Name()); matches {
 						cpuSetDesc, err := parseCPUFile(filepath.Join(*kubePodCgroupPath, f.Name(), cpusetFile.Name(), "cpuset.cpus"))
 						if err != nil {
 							return links, err
@@ -243,12 +237,11 @@ func getCPUInfo() (map[string]string, error) {
 	if err != nil {
 		return cpuInfo, fmt.Errorf("could not open path to cpu info")
 	}
+	fileRE := regexp.MustCompile("node[0-9]+")
+	cpuFileRE := regexp.MustCompile("cpu[0-9]+")
 	for _, f := range files {
 		if f.IsDir() {
-			if matches, err := regexp.MatchString("node[0-9]+", f.Name()); matches {
-				if err != nil {
-					log.Printf("CPU file not found %v", err)
-				}
+			if matches := fileRE.MatchString(f.Name()); matches {
 				if len(f.Name()) < 5 {
 					continue
 				}
@@ -258,7 +251,7 @@ func getCPUInfo() (map[string]string, error) {
 					return cpuInfo, fmt.Errorf("could not open cpu files: %v", err)
 				}
 				for _, cpu := range cpuFiles {
-					if matches, _ := regexp.MatchString("cpu[0-9]+", cpu.Name()); matches {
+					if matches := cpuFileRE.MatchString(cpu.Name()); matches {
 						if len(cpu.Name()) < 4 {
 							continue
 						}

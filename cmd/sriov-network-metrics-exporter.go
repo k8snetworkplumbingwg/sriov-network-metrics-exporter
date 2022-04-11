@@ -89,7 +89,7 @@ func noBody(next http.Handler) http.Handler {
 func limitRequests(next http.Handler, rateLimit rate.Limit, burstLimit int) http.Handler {
 	limiter := rate.NewLimiter(rateLimit, burstLimit)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if limiter.Allow() == false {
+		if !limiter.Allow() {
 			http.Error(w, http.StatusText(429), http.StatusTooManyRequests)
 			return
 		}
