@@ -10,6 +10,7 @@ import (
 	"log"
 	"path/filepath"
 	"regexp"
+	"sriov-network-metrics-exporter/pkg/utils"
 	"strconv"
 	"strings"
 
@@ -18,7 +19,7 @@ import (
 
 var (
 	kubepodcpu        = "kubepodcpu"
-	kubePodCgroupPath = flag.String("path.kubecgroup", "/sys/fs/cgroup/cpuset/kubepods/", "Path for location of kubernetes cgroups on the host system")
+	kubePodCgroupPath = flag.String("path.kubecgroup", "/sys/fs/cgroup/cpuset/kubepods.slice/", "Path for location of kubernetes cgroups on the host system")
 	sysDevSysNodePath = flag.String("path.nodecpuinfo", "/sys/devices/system/node/", "Path for location of system cpu information")
 	cpuCheckPointFile = flag.String("path.cpucheckpoint", "/var/lib/kubelet/cpu_manager_state", "Path for location of cpu manager checkpoint file")
 )
@@ -35,10 +36,6 @@ type cpuManagerCheckpoint struct {
 
 //readDefaultSet extracts the information about the "default" set of cpus available to kubernetes
 func readDefaultSet() string {
-	if isSymLink(*cpuCheckPointFile) {
-		log.Printf("error: cannot read symlink %v", *cpuCheckPointFile)
-		return ""
-	}
 	cpuRaw, err := ioutil.ReadFile(*cpuCheckPointFile)
 	if err != nil {
 		log.Printf("cpu checkpoint file can not be read: %v", err)
@@ -152,9 +149,6 @@ func (c kubepodCPUCollector) guaranteedPodCPUs() ([]podCPULink, error) {
 
 //parseCPUFile can read cpuFiles in the Kernel cpuset format
 func parseCPUFile(path string) (string, error) {
-	if isSymLink(path) {
-		return "", fmt.Errorf("cpuset file is a symlink. Can not read")
-	}
 	cpuRaw, err := ioutil.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("could not open cgroup cpuset files: %v", err)
@@ -268,4 +262,10 @@ func getCPUInfo() (map[string]string, error) {
 //Describe is not defined for this collector
 func (c kubepodCPUCollector) Describe(ch chan<- *prometheus.Desc) {
 
+}
+
+func VerifyKubePodCPUFilepaths() {
+	utils.VerifyPath(kubePodCgroupPath)
+	utils.VerifyPath(sysDevSysNodePath)
+	utils.VerifyPath(cpuCheckPointFile)
 }

@@ -69,12 +69,12 @@ func (r netlinkReader) ReadStats(pfName string, vfID string) sriovStats {
 	return func() sriovStats {
 		vf := r.data.Vfs[id]
 		return map[string]int64{
-			"tx_bytes":   int64(vf.TxBytes),
-			"rx_bytes":   int64(vf.RxBytes),
-			"tx_packets": int64(vf.TxPackets),
-			"rx_packets": int64(vf.RxPackets),
-			"tx_dropped": int64(vf.TxDropped),
-			"rx_dropped": int64(vf.RxDropped),
+			"tx_bytes":     int64(vf.TxBytes),
+			"rx_bytes":     int64(vf.RxBytes),
+			"tx_packets":   int64(vf.TxPackets),
+			"rx_packets":   int64(vf.RxPackets),
+			"tx_dropped":   int64(vf.TxDropped),
+			"rx_dropped":   int64(vf.RxDropped),
 			"rx_broadcast": int64(vf.Broadcast),
 			"rx_multicast": int64(vf.Multicast),
 		}

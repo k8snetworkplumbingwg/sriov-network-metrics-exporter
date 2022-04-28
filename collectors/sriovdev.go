@@ -1,4 +1,5 @@
 package collectors
+
 //sriovDev has the methods for implementing an sriov stats reader and publishing its information to Prometheus
 
 import (
@@ -9,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sriov-network-metrics-exporter/pkg/utils"
 	"strconv"
 	"strings"
 
@@ -65,10 +67,6 @@ func sriovNumaNodes(pfList []string) map[string]string {
 	numaList := make(map[string]string)
 	for _, pf := range pfList {
 		path := filepath.Join(*sysBusPci, pf, "numa_node")
-		if isSymLink(path) {
-			log.Printf("error: cannot read symlink %v", path)
-			continue
-		}
 		numaRaw, err := ioutil.ReadFile(path)
 		if err != nil {
 			log.Printf("Could not read numa node for card at %v", path)
@@ -156,10 +154,6 @@ func isSriovNetPF(pciAddr string) bool {
 
 //isNetDevice checks if the device is a net device by checking its device class
 func isNetDevice(filepath string) bool {
-	if isSymLink(filepath) {
-		log.Printf("error: cannot read symlink %v", filepath)
-		return false
-	}
 	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		return false
@@ -223,4 +217,9 @@ func getPFName(device string) string {
 
 //Describe isn't implemented for this collector
 func (c sriovdevCollector) Describe(chan<- *prometheus.Desc) {
+}
+
+func VerifySriovDevFilepaths() {
+	utils.VerifyPath(sysBusPci)
+	utils.VerifyPath(sysClassNet)
 }
