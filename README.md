@@ -1,7 +1,7 @@
 # SR-IOV Network Metrics Exporter
 Exporter that reads metrics for [SR-IOV Virtual Functions](https://www.intel.com/content/dam/doc/white-paper/pci-sig-single-root-io-virtualization-support-in-virtualization-technology-for-connectivity-paper.pdf) and exposes them in the Prometheus format.
 
-The SR-IOV Network Metrics Exporter is designed with the Kubernetes SR-IOV stack in mind, including the [SR-IOV CNI](https://github.com/intel/sriov-cni) and the [SR-IOV Network Device Plugin](https://github.com/intel/sriov-network-device-plugin). Only devices allocated with the SR-IOV Network Device Plugin will be able to be matched to specific Virtual Function metrics.
+The SR-IOV Network Metrics Exporter is designed with the Kubernetes SR-IOV stack in mind, including the [SR-IOV CNI](https://github.com/k8snetworkplumbingwg/sriov-cni) and the [SR-IOV Network Device Plugin](https://github.com/k8snetworkplumbingwg/sriov-network-device-plugin). Only devices allocated with the SR-IOV Network Device Plugin will be able to be matched to specific Virtual Function metrics.
 
 **This software is a pre-production alpha version and should not be deployed to production servers.**
 
@@ -159,20 +159,8 @@ A number of configuration flags can be passed to the SR-IOV Network Metrics Expo
 
 ## Communication and contribution
 
-Report a bug by [filing a new issue](https://github.com/intel/sriov-network-metrics-exporter/issues).
+Report a bug by [filing a new issue](https://github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/issues).
 
-Contribute by [opening a pull request](https://github.com/intel/sriov-network-metrics-exporter/pulls).
+Contribute by [opening a pull request](https://github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pulls).
 
 Learn [about pull requests](https://help.github.com/articles/using-pull-requests/).
-
-**Reporting a Potential Security Vulnerability:** If you have discovered potential security vulnerability in TAS, please send an e-mail to secure@intel.com. For issues related to Intel® Products, please visit [Intel Security Center](https://security-center.intel.com).
-
-It is important to include the following details:
-
-- The projects and versions affected
-- Detailed description of the vulnerability
-- Information on known exploits
-
-Vulnerability information is extremely sensitive. Please encrypt all security vulnerability reports using our [PGP key](https://www.intel.com/content/www/us/en/security-center/pgp-public-key.html).
-
-A member of the Intel® Product Security Team will review your e-mail and contact you to collaborate on resolving the issue. For more information on how Intel works to resolve security issues, see: [vulnerability handling guidelines](https://www.intel.com/content/www/us/en/security-center/vulnerability-handling-guidelines.html).
