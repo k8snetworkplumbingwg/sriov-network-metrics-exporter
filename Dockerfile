@@ -7,7 +7,7 @@ COPY ./ /usr/src/sriov-network-metrics-exporter
 WORKDIR /usr/src/sriov-network-metrics-exporter
 RUN make clean && make build
 
-FROM alpine:3.15
+FROM alpine:3.16
 COPY --from=builder /usr/src/sriov-network-metrics-exporter/bin/* /usr/bin/
 RUN apk update && apk add --no-cache ca-certificates=20211220-r0 && update-ca-certificates && apk add --no-cache openssl=1.1.1o-r0
 EXPOSE 9808
