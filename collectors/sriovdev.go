@@ -219,7 +219,7 @@ func getPFName(device string) string {
 func (c sriovdevCollector) Describe(chan<- *prometheus.Desc) {
 }
 
-func VerifySriovDevFilepaths() {
+func ResolveSriovDevFilepaths() {
 	utils.ResolvePath(sysBusPci)
 	utils.ResolvePath(sysClassNet)
 }
