@@ -99,7 +99,7 @@ func limitRequests(next http.Handler, rateLimit rate.Limit, burstLimit int) http
 }
 
 func verifyFlags() {
-	collectors.VerifySriovDevFilepaths()
-	collectors.VerifyKubePodCPUFilepaths()
-	collectors.VerifyKubePodDeviceFilepaths()
+	collectors.ResolveSriovDevFilepaths()
+	collectors.ResolveKubePodCPUFilepaths()
+	collectors.ResolveKubePodDeviceFilepaths()
 }

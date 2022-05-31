@@ -112,5 +112,5 @@ func isPci(id string) bool {
 }
 
 func VerifyKubePodDeviceFilepaths() {
-	utils.VerifyPath(podResourcesPath)
+	utils.ResolvePath(podResourcesPath)
 }

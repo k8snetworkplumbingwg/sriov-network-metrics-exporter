@@ -264,8 +264,8 @@ func (c kubepodCPUCollector) Describe(ch chan<- *prometheus.Desc) {
 
 }
 
-func VerifyKubePodCPUFilepaths() {
-	utils.VerifyPath(kubePodCgroupPath)
-	utils.VerifyPath(sysDevSysNodePath)
-	utils.VerifyPath(cpuCheckPointFile)
+func ResolveKubePodCPUFilepaths() {
+	utils.ResolvePath(kubePodCgroupPath)
+	utils.ResolvePath(sysDevSysNodePath)
+	utils.ResolvePath(cpuCheckPointFile)
 }

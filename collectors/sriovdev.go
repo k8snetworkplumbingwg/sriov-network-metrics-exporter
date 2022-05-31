@@ -220,6 +220,6 @@ func (c sriovdevCollector) Describe(chan<- *prometheus.Desc) {
 }
 
 func VerifySriovDevFilepaths() {
-	utils.VerifyPath(sysBusPci)
-	utils.VerifyPath(sysClassNet)
+	utils.ResolvePath(sysBusPci)
+	utils.ResolvePath(sysClassNet)
 }
