@@ -111,6 +111,6 @@ func isPci(id string) bool {
 	return pciAddressPattern.MatchString(id)
 }
 
-func VerifyKubePodDeviceFilepaths() {
+func ResolveKubePodDeviceFilepaths() {
 	utils.ResolvePath(podResourcesPath)
 }
