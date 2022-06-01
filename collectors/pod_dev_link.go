@@ -1,10 +1,12 @@
 package collectors
+
 //pod_dev_link publishes which devices are connected to which pods in Kubernetes by querying the Kubelet api
 
 import (
 	"context"
 	"flag"
 	"regexp"
+	"sriov-network-metrics-exporter/pkg/utils"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -107,4 +109,8 @@ func (c podDevLinkCollector) Describe(ch chan<- *prometheus.Desc) {
 //checks to see if a device id matches a pci address. If not we're able to discard it.
 func isPci(id string) bool {
 	return pciAddressPattern.MatchString(id)
+}
+
+func ResolveKubePodDeviceFilepaths() {
+	utils.ResolvePath(podResourcesPath)
 }

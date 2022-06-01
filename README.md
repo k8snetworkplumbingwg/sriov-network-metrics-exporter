@@ -53,6 +53,10 @@ docker build . -t localhost:5000/sriov-metrics-exporter && docker push localhost
 
 The above assumes a registry available across the cluster at localhost:5000, for example on using the [Docker Registry Proxy](https://github.com/kubernetes-sigs/kubespray/blob/master/roles/kubernetes-apps/registry/README.md). If your registry is at a different address the image name will need to be changed to reflect that in the [Kubernetes daemonset](/deployment/daemonset.yaml)
 
+Create monitoring namespace:
+```
+kubectl create namespace monitoring
+```
 Once the image is available from each node in the cluster run:
 
 ```

@@ -23,6 +23,7 @@ var (
 
 func main() {
 	flag.Parse()
+	verifyFlags()
 	enabledCollectors := collectors.Enabled()
 	err := prometheus.Register(enabledCollectors)
 	if err != nil {
@@ -89,10 +90,16 @@ func noBody(next http.Handler) http.Handler {
 func limitRequests(next http.Handler, rateLimit rate.Limit, burstLimit int) http.Handler {
 	limiter := rate.NewLimiter(rateLimit, burstLimit)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if limiter.Allow() == false {
+		if !limiter.Allow() {
 			http.Error(w, http.StatusText(429), http.StatusTooManyRequests)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func verifyFlags() {
+	collectors.ResolveSriovDevFilepaths()
+	collectors.ResolveKubePodCPUFilepaths()
+	collectors.ResolveKubePodDeviceFilepaths()
 }

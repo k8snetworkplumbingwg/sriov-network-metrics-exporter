@@ -3,8 +3,8 @@ clean:
 	go clean --modcache
 
 build:
-	go get -u golang.org/x/lint/golint
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
 	go mod tidy
 	go fmt ./...
-	golint ./...
+	golangci-lint run 
 	GO111MODULE=on go build -ldflags "-s -w" -buildmode=pie -o bin/sriov-exporter cmd/sriov-network-metrics-exporter.go
