@@ -1,3 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sriov-network-metrics-exporter
+  namespace: monitoring
+data:
+  drivers.yaml: |-
+    drivers:
+      - name: ice
+        version: 1.9.11
+      - name: mlx5_core
+        version: 5.15.0-53-generic
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -17,14 +30,16 @@ spec:
         app.kubernetes.io/name: sriov-metrics-exporter
         app.kubernetes.io/version: v0.0.1
     spec:
+      hostNetwork: true
       containers:
       - args:
         - --path.kubecgroup=/host/kubecgroup
         - --path.sysbuspci=/host/sys/bus/pci/devices/
-        - --path.sysclassnet=/host/sys/class/net
+        - --path.sysclassnet=/host/sys/class/net/
         - --path.cpucheckpoint=/host/cpu_manager_state
-        - --path.kubeletSocket=/host/kubelet.sock
+        - --path.kubeletsocket=/host/kubelet.sock
         - --collector.kubepoddevice=true
+        - --collector.vfstatspriority=sysfs,netlink
         image: localhost:5000/sriov-metrics-exporter
         imagePullPolicy: Always 
         name: sriov-metrics-exporter
@@ -59,8 +74,11 @@ spec:
         - mountPath: /host/cpu_manager_state
           name: cpucheckpoint
           readOnly: true
+        - name: sriov-network-metrics-exporter
+          mountPath: /etc/sriov-network-metrics-exporter
       nodeSelector:
         kubernetes.io/os: linux
+        feature.node.kubernetes.io/network-sriov.capable: "true"
       restartPolicy: Always
       tolerations:
       - operator: Exists
@@ -89,6 +107,9 @@ spec:
           path: /sys/devices
           type: "Directory"
         name: sysdevices
+      - name: sriov-network-metrics-exporter
+        configMap:
+          name: sriov-network-metrics-exporter
 ---
 apiVersion: v1
 kind: Service
