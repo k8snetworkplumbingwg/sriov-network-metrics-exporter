@@ -9,11 +9,11 @@ The SR-IOV Network Metrics Exporter is designed with the Kubernetes SR-IOV stack
 The sysfs collector for Virtual Function telemetry supports NICs with drivers that implement the SR-IOV sysfs management interface e.g. i40e, mlnx_en and mlnx_ofed.
 
 The netlink collector relies on driver support and a kernel version of 4.4 or higher.
-To support netlink, we recommend these driver versions: i40e driver of 2.11+ for Intel® 700 series NICs and ice driver 1.2+ for Intel® 800 series NICs.
+To support netlink, we recommend these driver versions: an i40e driver of 2.11+ or higher for Intel® 700 series NICs and ice driver 1.2+ for Intel® 800 series NICs.
 
 To check your current driver version run: `modinfo <driver> | grep ^version` where driver is `i40e` or `ice`\
 i40e drivers: [Intel Download Center](https://downloadcenter.intel.com/download/18026/), [Source Forge](https://sourceforge.net/projects/e1000/files/i40e%20stable/)\
-ice drivers: [Intel Download Center](https://www.intel.com/content/www/us/en/download/19630/), [Sorce Forge](https://sourceforge.net/projects/e1000/files/ice%20stable/)
+ice drivers: [Intel Download Center](https://www.intel.com/content/www/us/en/download/19630/), [Source Forge](https://sourceforge.net/projects/e1000/files/ice%20stable/)
 
 ## Metrics
 This exporter will make the following metrics available:
