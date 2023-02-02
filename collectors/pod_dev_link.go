@@ -88,8 +88,8 @@ func createPodDevLinkCollector() prometheus.Collector {
 	}
 }
 
-//PodResources uses the kubernetes kubelet api to get information about the devices and the pods they are attached to.
-//We create and close a new connection here on each run. The performance impact of this seems marginal - but sharing a connection might save cpu time
+// PodResources uses the kubernetes kubelet api to get information about the devices and the pods they are attached to.
+// We create and close a new connection here on each run. The performance impact of this seems marginal - but sharing a connection might save cpu time
 func PodResources() []*v1.PodResources {
 	var podResource []*v1.PodResources
 
@@ -120,7 +120,7 @@ func isPci(id string) bool {
 }
 
 func resolveKubePodDeviceFilepaths() error {
-	if err := utils.ResolveFlag("path.kubeletSocket", podResourcesPath); err != nil {
+	if err := utils.ResolveFlag("path.kubeletsocket", podResourcesPath); err != nil {
 		return err
 	}
 
