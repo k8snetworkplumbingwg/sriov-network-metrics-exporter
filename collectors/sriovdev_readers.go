@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"sriov-network-metrics-exporter/pkg/drvinfo"
-	"sriov-network-metrics-exporter/pkg/utils"
-	"sriov-network-metrics-exporter/pkg/vfstats"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/drvinfo"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/utils"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/vfstats"
 )
 
 const sriovVFStatsDir = "%s/device/sriov/%s/stats"
@@ -30,14 +30,14 @@ type netlinkReader struct {
 	data vfstats.PerPF
 }
 
-// sysfsReader is able to read stats from Physical Functions running the i40e or ice driver.
-// Other drivers that store all VF stats in files under one folder could use this reader.
+// sysfsReader is able to read stats from Physical Functions running the i40e or ice driver
+// Other drivers that store all VF stats in files under one folder could use this reader
 type sysfsReader struct {
 	statsFS string
 }
 
 // getStatsReader returns the correct stat reader for the given PF
-// Currently only i40e and ice are implemented, but other drivers can be implemented and picked up here.
+// Currently only drivers that implement netlink or the sriov sysfs interface are supported
 func getStatsReader(pf string, priority []string) sriovStatReader {
 	for _, collector := range priority {
 		switch collector {

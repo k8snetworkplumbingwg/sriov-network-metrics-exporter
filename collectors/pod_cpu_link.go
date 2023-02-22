@@ -11,9 +11,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sriov-network-metrics-exporter/pkg/utils"
 	"strconv"
 	"strings"
+
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/utils"
 
 	"github.com/prometheus/client_golang/prometheus"
 )

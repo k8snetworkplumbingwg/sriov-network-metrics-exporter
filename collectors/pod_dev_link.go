@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	v1 "k8s.io/kubelet/pkg/apis/podresources/v1"
 
-	"sriov-network-metrics-exporter/pkg/utils"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/utils"
 )
 
 var (

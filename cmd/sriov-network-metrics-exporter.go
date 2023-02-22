@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 
-	"sriov-network-metrics-exporter/collectors"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/collectors"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

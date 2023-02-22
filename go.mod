@@ -1,4 +1,4 @@
-module sriov-network-metrics-exporter
+module github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter
 
 go 1.18
 

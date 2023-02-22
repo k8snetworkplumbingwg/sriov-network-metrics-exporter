@@ -13,7 +13,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"sriov-network-metrics-exporter/pkg/utils"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/utils"
 )
 
 var buffer gbytes.Buffer

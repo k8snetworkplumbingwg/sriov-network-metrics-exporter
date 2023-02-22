@@ -14,8 +14,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"sriov-network-metrics-exporter/pkg/drvinfo"
-	"sriov-network-metrics-exporter/pkg/utils"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/utils"
+
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/drvinfo"
 )
 
 const (
@@ -227,7 +228,7 @@ func getPFName(device string) string {
 	return pfdir[0].Name()
 }
 
-//isNetDevice checks if the device is a net device by checking its device class
+// isNetDevice checks if the device is a net device by checking its device class
 func isNetDevice(filepath string) bool {
 	file, err := fs.ReadFile(devfs, filepath)
 	if err != nil {

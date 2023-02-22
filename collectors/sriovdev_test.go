@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"io/fs"
 	"net"
-	"sriov-network-metrics-exporter/pkg/drvinfo"
-	"sriov-network-metrics-exporter/pkg/vfstats"
 	"testing/fstest"
+
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/drvinfo"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/vfstats"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
