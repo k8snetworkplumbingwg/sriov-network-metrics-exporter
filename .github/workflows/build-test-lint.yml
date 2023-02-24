@@ -90,7 +90,7 @@ jobs:
     - uses: brpaz/hadolint-action@v1.5.0
       name: Run Hadolint
       with:
-       dockerfile: ./images/Dockerfile
+       dockerfile: ./Dockerfile
        ignore: DL3018 # DL3018: GH issue 368
 
   go-check:
