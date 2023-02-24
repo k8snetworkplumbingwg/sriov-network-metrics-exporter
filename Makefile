@@ -32,7 +32,7 @@ test:
 	go test ./... -coverprofile cover.out
 
 test-coverage:
-	ginkgo -v -r -cover -coverprofile=cover.out --output-dir=.
+	go run ./ginkgo -v -r -cover -coverprofile=cover.out --output-dir=.
 	go tool cover -html=cover.out	
 
 go-lint-install:
