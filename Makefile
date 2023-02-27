@@ -29,11 +29,11 @@ image-push:
 	$(IMAGE_BUILDER) push $(IMAGE_NAME)
 
 test:
-	go test ./... -coverprofile cover.out
-
+	go test ./... -count=1
+	
 test-coverage:
-	ginkgo -v -r -cover -coverprofile=cover.out --output-dir=.
-	go tool cover -html=cover.out	
+	go test ./... -coverprofile cover.out
+	go tool cover -func cover.out
 
 go-lint-install:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.49
