@@ -1,7 +1,5 @@
 FROM golang:alpine as builder
 
-ENV HTTP_PROXY $http_proxy
-ENV HTTPS_PROXY $https_proxy
 RUN apk add --no-cache --virtual build-dependencies build-base linux-headers git
 COPY ./ /usr/src/sriov-network-metrics-exporter
 WORKDIR /usr/src/sriov-network-metrics-exporter

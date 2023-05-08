@@ -6,11 +6,14 @@ The SR-IOV Network Metrics Exporter is designed with the Kubernetes SR-IOV stack
 **This software is a pre-production alpha version and should not be deployed to production servers.**
 
 ## Hardware support
-The default netlink implementation for Virtual Function telemetry relies on driver support and a kernel version of 4.4 or higher. This version requires i40e driver of 2.11+ for Intel® 700 series NICs. Updated i40e drivers can be fould at the [Intel Download Center](https://downloadcenter.intel.com/download/24411/Intel-Network-Adapter-Driver-for-PCIe-40-Gigabit-Ethernet-Network-Connections-under-Linux-?v=t)
+The sysfs collector for Virtual Function telemetry supports NICs with drivers that implement the SR-IOV sysfs management interface e.g. ice, i40e, mlnx_en and mlnx_ofed.
 
-For kernels older than 4.4 a driver specific collector is enabled which is compatible with Intel® 700 series NICs using and i40e driver of 2.11 or above. To check your current driver version run: ``modinfo i40e | grep ^version``
-To upgrade visit the [official driver download site](https://downloadcenter.intel.com/download/24411/Intel-Network-Adapter-Driver-for-PCIe-40-Gigabit-Ethernet-Network-Connections-Under-Linux-).
-To use this version the flag collector.netlink must be set to "false".
+The netlink collector relies on driver support and a kernel version of 4.4 or higher.
+To support netlink, we recommend these driver versions: an i40e driver of 2.11+ or higher for Intel® 700 series NICs and ice driver 1.2+ for Intel® 800 series NICs.
+
+To check your current driver version run: `modinfo <driver> | grep ^version` where driver is `i40e` or `ice`\
+i40e drivers: [Intel Download Center](https://downloadcenter.intel.com/download/18026/), [Source Forge](https://sourceforge.net/projects/e1000/files/i40e%20stable/)\
+ice drivers: [Intel Download Center](https://www.intel.com/content/www/us/en/download/19630/), [Source Forge](https://sourceforge.net/projects/e1000/files/ice%20stable/)
 
 ## Metrics
 This exporter will make the following metrics available:
@@ -42,6 +45,8 @@ Once available through Prometheus VF metrics can be used by metrics applications
 
 ## Installation
 ### Kubernetes installation
+
+#### Building images
 Typical deployment is as a daemonset in a cluster. A daemonset requires the image to be available on each node in the cluster or at a registry accessible from each node.
 The following assumes a local Docker registry available at localhost:5000, and assumes Docker is being used to build and manage containers in the cluster.
 
@@ -49,9 +54,25 @@ In order to build the container and load it to a local registry run:
 
 ```
 docker build . -t localhost:5000/sriov-metrics-exporter && docker push localhost:5000/sriov-metrics-exporter
+
+or
+
+make docker-build && make docker-push
 ```
 
 The above assumes a registry available across the cluster at localhost:5000, for example on using the [Docker Registry Proxy](https://github.com/kubernetes-sigs/kubespray/blob/master/roles/kubernetes-apps/registry/README.md). If your registry is at a different address the image name will need to be changed to reflect that in the [Kubernetes daemonset](/deployment/daemonset.yaml)
+
+#### Labeling nodes
+
+SR-IOV Network Metrics Exporter will only be deployed on nodes labeled with `"feature.node.kubernetes.io/network-sriov.capable": "true"` label. You can label the nodes automatically using [Node Feature Discovery](https://github.com/kubernetes-sigs/node-feature-discovery), or manually, executing the following `kubectl` command:
+
+```
+kubectl label node <nodename> feature.node.kubernetes.io/network-sriov.capable="true"
+```
+
+If you prefer to use the `Node Feature Discovery` you can refer to the [Quick-start guide](https://github.com/kubernetes-sigs/node-feature-discovery#quick-start--the-short-short-version) on the project's repository.
+
+#### Deploying SR-IOV Network Metrics Exporter
 
 Create monitoring namespace:
 ```
@@ -98,7 +119,7 @@ In order to expose these metrics to Prometheus we need to configure the database
 ```
 The above should be added to the Prometheus configuration as a new target. For more about configuring Prometheus see the [official guide.](https://prometheus.io/docs/prometheus/latest/configuration/configuration/) Once Prometheus is started with this included in its config sriov-metrics should appear on the "Targets page". Metrics should be available by querying the Prometheus API or in the web interface.
 
-In this mode it will serve stats on an endpoint inside the cluster. Prometheus will detect the label on the service endpoint throught the above configuration.
+In this mode it will serve stats on an endpoint inside the cluster. Prometheus will detect the label on the service endpoint through the above configuration.
 
 ### Standalone installation to an endpoint on the host. 
 
@@ -145,21 +166,25 @@ The above should be added to the Prometheus configuration as a new target. For m
 ### Configuration
 A number of configuration flags can be passed to the SR-IOV Network Metrics Exporter in order to change enabled collectors, the paths it reads from and some properties of its web endpoint.
 
+The collector.vfstatspriority flag defines the priority of vf stats collectors, each pf will use the first supported collector in the list.\
+Example: using the priority, "sysfs,netlink", with Intel® 700 and 800 series NICs installed and vfs initialized, the sysfs collector will be used for the 700 series NIC, and netlink for the 800 series NIC since it doesn't support sysfs collection, therefore it falls back to the netlink driver.
+
 | Flag | Type | Description | Default Value |
 |----|:----|:----|:----|
 | collector.kubepodcpu | boolean | Enables the kubepodcpu collector | false |
 | collector.kubepoddevice | boolean | Enables the kubepoddevice collector | false |
-| collector.vfstats | boolean |Enables the vfstats collector |  true |
-| collector.netlink | boolean |Enables using netlink for vfstats collection |  true |
+| collector.vfstatspriority | string | Sets the priority of vfstats collectors | sysfs,netlink |
+| collector.sysfs | boolean | Enables using sr-iov sysfs for vfstats collection | true |
+| collector.netlink | boolean | Enables using netlink for vfstats collection | true |
 | path.cpucheckpoint | string | Path for location of cpu manager checkpoint file | /var/lib/kubelet/cpu_manager_state |
-| path.kubecgroup |string | Path for location of kubernetes cgroups on the host system | /sys/fs/cgroup/cpuset/kubepods/|
-| path.kubeletSocket | string | Path to kubelet resources socket | /var/lib/kubelet/pod-resources/kubelet.sock |
+| path.kubecgroup |string | Path for location of kubernetes cgroups on the host system | /sys/fs/cgroup/cpuset/kubepods/ |
+| path.kubeletsocket | string | Path to kubelet resources socket | /var/lib/kubelet/pod-resources/kubelet.sock |
 | path.nodecpuinfo | string | Path for location of system cpu information | /sys/devices/system/node/ |
 | path.sysbuspci | string | Path to sys/bus/pci on host | /sys/bus/pci/devices |
 | path.sysclassnet | string | Path to sys/class/net on host | /sys/class/net/ |
-| web.listen-address | string | Address to listen on for web interface and telemetry. | :9808 |
-| web.rate-burst | int | Maximum per second burst rate for requests. | 10 |
-| web.rate-limit | int | Limit for requests per second. | 1 |
+| web.listen-address | string | Address to listen on for web interface and telemetry | :9808 |
+| web.rate-burst | int | Maximum per second burst rate for requests | 10 |
+| web.rate-limit | int | Limit for requests per second | 1 |
 
 ## Communication and contribution
 

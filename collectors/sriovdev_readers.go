@@ -1,71 +1,81 @@
-//This file should contain different sriov stat implementations for different drivers and versions.
+// This file should contain different sriov stat implementations for different drivers and versions.
 
 package collectors
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
-	"sriov-network-metrics-exporter/pkg/vfstats"
 	"strconv"
 	"strings"
+
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/drvinfo"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/utils"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/vfstats"
 )
+
+const sriovVFStatsDir = "%s/device/sriov/%s/stats"
 
 type sriovStats map[string]int64
 
-//sriovStatReader is an interface which takes in the Physical Function name and vf id and returns the stats for the VF
+// sriovStatReader is an interface which takes in the Physical Function name and vf id and returns the stats for the VF
 type sriovStatReader interface {
 	ReadStats(vfID string, pfName string) sriovStats
 }
 
-//netlinkReader is able to read stats from drivers that support the netlink interface
+// netlinkReader is able to read stats from drivers that support the netlink interface
 type netlinkReader struct {
 	data vfstats.PerPF
 }
 
-//statsReader is able to read stats from Physical Functions running the i40e or ice driver.
-//other drivers that store all VF stats in files under one folder could use this reader.
-type statsReader struct {
+// sysfsReader is able to read stats from Physical Functions running the i40e or ice driver
+// Other drivers that store all VF stats in files under one folder could use this reader
+type sysfsReader struct {
 	statsFS string
 }
 
-//statReaderForPF returns the correct stat reader for the given PF
-//currently only i40e and ice are implemented, but other drivers can be implemented and picked up here.
-func statReaderForPF(pf string) sriovStatReader {
-	if *netlinkEnabled {
-		log.Printf("using netlink for %v", pf)
-		return netlinkReader{vfstats.VfStats(pf)}
+// getStatsReader returns the correct stat reader for the given PF
+// Currently only drivers that implement netlink or the sriov sysfs interface are supported
+func getStatsReader(pf string, priority []string) sriovStatReader {
+	for _, collector := range priority {
+		switch collector {
+		case "sysfs":
+			if _, err := fs.Stat(netfs, filepath.Join(pf, "/device/sriov")); !os.IsNotExist(err) {
+				log.Printf("%s - using sysfs collector", pf)
+				return sysfsReader{filepath.Join(*sysClassNet, "%s/device/sriov/%s/stats/")}
+			}
+
+			log.Printf("%s does not support sysfs collector, directory '%s' does not exist", pf, filepath.Join(pf, "/device/sriov"))
+		case "netlink":
+			info, err := drvinfo.GetDriverInfo(pf)
+			if err != nil {
+				log.Printf("failed to get driver info error %v", err)
+				return nil
+			}
+
+			if supportedDrivers.IsDriverSupported(info) {
+				log.Printf("%s - using netlink collector", pf)
+				return netlinkReader{vfstats.VfStats(pf)}
+			}
+
+			log.Printf("%s does not support netlink collector, %+v driver not supported", pf, info)
+		default:
+			log.Printf("%s - '%s' collector not supported", pf, collector)
+		}
 	}
-	pfDriverPath := filepath.Join(*sysClassNet, pf, "device", driverFile)
-	//driver type is found by getting the destination of the symbolic link on the driver path from /sys/bus/pci
-	driverInfo, err := os.Readlink(pfDriverPath)
-	if err != nil {
-		log.Printf("failed to get driver info: %v", err)
-		return nil
-	}
-	pfDriver := filepath.Base(driverInfo)
-	switch pfDriver {
-	case "i40e":
-		log.Printf("using %v reader for %v", pfDriver, pf)
-		return statsReader{filepath.Join(*sysClassNet, "/%s/device/sriov/%s/stats/")}
-	case "ice":
-		log.Printf("using %v reader for %v", pfDriver, pf)
-		return statsReader{filepath.Join(*sysClassNet, "/%sv%s/statistics/")}
-	default:
-		log.Printf("No stats reader available for Physical Function %v", pf)
-		return nil
-	}
+	return nil
 }
 
-//ReadStats takes in the name of a PF and the VF Id and returns a stats object.
+// ReadStats takes in the name of a PF and the VF Id and returns a stats object.
 func (r netlinkReader) ReadStats(pfName string, vfID string) sriovStats {
 	id, err := strconv.Atoi(vfID)
 	if err != nil {
-		log.Print("Error reading passed Virtual Function ID")
+		log.Print("error reading passed virtual function id")
 		return sriovStats{}
 	}
+
 	return func() sriovStats {
 		vf := r.data.Vfs[id]
 		return map[string]int64{
@@ -81,31 +91,40 @@ func (r netlinkReader) ReadStats(pfName string, vfID string) sriovStats {
 	}()
 }
 
-func (r statsReader) ReadStats(pfName string, vfID string) sriovStats {
+func (r sysfsReader) ReadStats(pfName string, vfID string) sriovStats {
 	stats := make(sriovStats, 0)
-	statroot := fmt.Sprintf(r.statsFS, pfName, vfID)
-	files, err := ioutil.ReadDir(statroot)
+
+	statDir := fmt.Sprintf(sriovVFStatsDir, pfName, vfID)
+	files, err := fs.ReadDir(netfs, statDir)
 	if err != nil {
+		log.Printf("error reading stats for %s vf%s\n%v", pfName, vfID, err)
 		return stats
 	}
-	log.Printf("getting stats for pf %v %v", pfName, vfID)
+
+	log.Printf("getting stats for %s vf%s", pfName, vfID)
+
 	for _, f := range files {
-		path := filepath.Join(statroot, f.Name())
-		if isSymLink(path) {
-			log.Printf("error: cannot read symlink %v", path)
+		path := filepath.Join(statDir, f.Name())
+		if utils.IsSymLink(netfs, path) {
+			log.Printf("could not stat file '%s'", path)
 			continue
 		}
-		statRaw, err := ioutil.ReadFile(path)
+
+		statRaw, err := fs.ReadFile(netfs, path)
 		if err != nil {
+			log.Printf("error reading file, %v", err)
 			continue
 		}
+
 		statString := strings.TrimSpace(string(statRaw))
 		value, err := strconv.ParseInt(statString, 10, 64)
 		if err != nil {
-			log.Printf("Error reading file %v: %v", f.Name(), err)
+			log.Printf("%s - error parsing integer from value '%s'\n%v", f.Name(), statString, err)
 			continue
 		}
+
 		stats[f.Name()] = value
 	}
+
 	return stats
 }
