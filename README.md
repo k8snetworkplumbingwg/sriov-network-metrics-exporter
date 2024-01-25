@@ -1,7 +1,7 @@
 # SR-IOV Network Metrics Exporter
 Exporter that reads metrics for [SR-IOV Virtual Functions](https://www.intel.com/content/dam/doc/white-paper/pci-sig-single-root-io-virtualization-support-in-virtualization-technology-for-connectivity-paper.pdf) and exposes them in the Prometheus format.
 
-The SR-IOV Network Metrics Exporter is designed with the Kubernetes SR-IOV stack in mind, including the [SR-IOV CNI](https://github.com/k8snetworkplumbingwg/sriov-cni) and the [SR-IOV Network Device Plugin](https://github.com/k8snetworkplumbingwg/sriov-network-device-plugin). Only devices allocated with the SR-IOV Network Device Plugin will be able to be matched to specific Virtual Function metrics.
+The SR-IOV Network Metrics Exporter is designed with the Kubernetes SR-IOV stack in mind, including the [SR-IOV CNI](https://github.com/k8snetworkplumbingwg/sriov-cni) and the [SR-IOV Network Device Plugin](https://github.com/k8snetworkplumbingwg/sriov-network-device-plugin).
 
 **This software is a pre-production alpha version and should not be deployed to production servers.**
 
