@@ -1,0 +1,16 @@
+reviewers:
+  - SchSeba
+  - zeeke
+  - wizhaoredhat
+  - bn222
+  - vrindle
+  - SalDaniele
+approvers:
+  - SchSeba
+  - zeeke
+  - wizhaoredhat
+  - bn222
+  - vrindle
+  - SalDaniele
+component: "Networking"
+subcomponent: "SR-IOV"
