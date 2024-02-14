@@ -1,0 +1,14 @@
+FROM registry.ci.openshift.org/ocp/builder:rhel-9-golang-1.21-openshift-4.16 AS builder
+
+WORKDIR /usr/src/sriov-network-metrics-exporter
+COPY . .
+
+RUN make clean && make build
+
+FROM registry.ci.openshift.org/ocp/4.16:base-rhel9
+LABEL io.k8s.display-name="OpenShift SR-IOV Network Metrics Exporter-operator"
+LABEL io.k8s.description="This component exports metrics related to VF configured through the SR-IOV network operator."
+
+COPY --from=builder /usr/src/sriov-network-metrics-exporter/bin/* /usr/bin/
+EXPOSE 9808
+ENTRYPOINT ["sriov-exporter"]
