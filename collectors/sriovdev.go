@@ -1,118 +1,100 @@
 package collectors
 
-//sriovDev has the methods for implementing an sriov stats reader and publishing its information to Prometheus
+// sriovDev has the methods for implementing an sriov stats reader and publishing its information to Prometheus
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
-	"sriov-network-metrics-exporter/pkg/utils"
 	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/utils"
+
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/drvinfo"
 )
 
 const (
-	noNumaInfo = "-1"
+	noNumaInfo             = "-1"
+	supportedDriversDbPath = "/etc/sriov-network-metrics-exporter/drivers.yaml"
 )
 
 var (
-	sysBusPci             = flag.String("path.sysbuspci", "/sys/bus/pci/devices", "Path to sys/bus/pci on host")
-	sysClassNet           = flag.String("path.sysclassnet", "/sys/class/net/", "Path to sys/class/net on host")
-	netlinkEnabled        = flag.Bool("collector.netlink", true, "Enable or disable use of netlink for VF stats collection in favor of driver specific collectors.")
-	totalVfFile           = "sriov_totalvfs"
-	pfNameFile            = "/net"
-	netClassFile          = "/class"
-	driverFile            = "/driver"
-	netClass        int64 = 0x020000
-	vfStatSubsystem       = "vf"
-	sriovDev              = "vfstats"
-	sriovPFs              = make([]string, 0)
+	collectorPriority    utils.StringListFlag
+	defaultPriority            = utils.StringListFlag{"sysfs", "netlink"}
+	sysBusPci                  = flag.String("path.sysbuspci", "/sys/bus/pci/devices", "Path to sys/bus/pci/devices/ on host")
+	sysClassNet                = flag.String("path.sysclassnet", "/sys/class/net", "Path to sys/class/net/ on host")
+	pfNameFile                 = "net"
+	netClassFile               = "class"
+	netClass             int64 = 0x020000
+	vfStatsSubsystem           = "vf"
+	vfStatsCollectorName       = "vfstats"
+
+	supportedDrivers drvinfo.SupportedDrivers
+
+	devfs fs.FS
+	netfs fs.FS
 )
 
-//vfList contains a list of addresses for VFs with the name of the physical interface as value
-type vfWithRoot map[string]string
+// vfsPCIAddr is a map of VF IDs to VF PCI addresses i.e. {"0": "0000:3b:02.0", "1": "0000:3b:02.1"}
+type vfsPCIAddr map[string]string
 
-//init runs the registration for this collector on package import
+// init runs the registration for this collector on package import
 func init() {
-	register(sriovDev, enabled, createSriovdevCollector)
+	flag.Var(&collectorPriority, "collector.vfstatspriority", "Priority of collectors")
+	supportedDrivers = drvinfo.NewSupportedDrivers(supportedDriversDbPath)
+	register(vfStatsCollectorName, enabled, createSriovDevCollector)
 }
 
-//this is the generic collector for VF stats.
-type sriovdevCollector struct {
-	name       string
-	pfWithNuma map[string]string
+// This is the generic collector for VF stats.
+type sriovDevCollector struct {
+	name            string
+	pfsWithNumaInfo map[string]string
 }
 
-//SriovdevCollector is initialized with the physical functions on the host. This is not updated after initialization.
-func createSriovdevCollector() prometheus.Collector {
-	pfList, err := getSriovPFs()
-	numaList := sriovNumaNodes(pfList)
-	if err != nil {
-		log.Fatal(err)
+type sriovDev struct {
+	name   string
+	reader sriovStatReader
+	vfs    vfsPCIAddr
+}
+
+// Collect runs the appropriate collector for each SR-IOV vf on the system and publishes its statistics.
+func (c sriovDevCollector) Collect(ch chan<- prometheus.Metric) {
+	log.Printf("collecting sr-iov device metrics")
+
+	priority := collectorPriority
+	if len(priority) == 0 {
+		log.Printf("collector.priority not specified in flags, using default priority")
+		priority = defaultPriority
 	}
-	return sriovdevCollector{
-		name:       sriovDev,
-		pfWithNuma: numaList,
-	}
-}
 
-//sriovNumaNodes returns the numa location for each of the PFs with SR-IOV capabilities
-func sriovNumaNodes(pfList []string) map[string]string {
-	numaList := make(map[string]string)
-	for _, pf := range pfList {
-		path := filepath.Join(*sysBusPci, pf, "numa_node")
-		numaRaw, err := ioutil.ReadFile(path)
-		if err != nil {
-			log.Printf("Could not read numa node for card at %v", path)
-			numaList[pf] = ""
-		}
-		numaAsString := strings.TrimSpace(string(numaRaw))
-		if err == nil && numaAsString != noNumaInfo {
-			numaList[pf] = numaAsString
-		} else {
-			log.Printf("Could not read numa node for card at %v", path)
-			numaList[pf] = ""
-		}
-	}
-	return numaList
-}
+	log.Printf("collector priority: %s", priority)
+	for pfAddr, numaNode := range c.pfsWithNumaInfo {
+		pf := getSriovDev(pfAddr, priority)
 
-//Collect runs the appropriate collector for each SR-IOV vf on the system and publishes its statistics.
-func (c sriovdevCollector) Collect(ch chan<- prometheus.Metric) {
-	for pfAddr, numaNode := range c.pfWithNuma {
-		pfName := getPFName(pfAddr)
-		if pfName == "" {
+		if pf.reader == nil {
 			continue
 		}
-		// appropriate reader for VF is returned based on the PF.
-		//This reader may also be the moment for reading the stats from each device as in the netlink reader.
-		reader := statReaderForPF(pfName)
-		if reader == nil {
-			continue
-		}
-		vfs, err := vfList(pfAddr)
-		if err != nil {
-			continue
-		}
-		for id, address := range vfs {
-			stats := reader.ReadStats(pfName, id)
+
+		for id, address := range pf.vfs {
+			stats := pf.reader.ReadStats(pf.name, id)
 			for name, v := range stats {
 				desc := prometheus.NewDesc(
-					prometheus.BuildFQName(collectorNamespace, vfStatSubsystem, name),
+					prometheus.BuildFQName(collectorNamespace, vfStatsSubsystem, name),
 					fmt.Sprintf("Statistic %s.", name),
 					[]string{"pf", "vf", "pciAddr", "numa_node"}, nil,
 				)
+
 				ch <- prometheus.MustNewConstMetric(
 					desc,
 					prometheus.CounterValue,
 					float64(v),
-					pfName,
+					pf.name,
 					id,
 					address,
 					numaNode,
@@ -122,104 +104,158 @@ func (c sriovdevCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-//getSriovPFs returns the SRIOV capable Physical Network functions for the host.
-func getSriovPFs() ([]string, error) {
-	devs := getPCIDevs()
-	if len(devs) == 0 {
-		return sriovPFs, errors.New("pci devices could not be found")
+// Describe isn't implemented for this collector
+func (c sriovDevCollector) Describe(ch chan<- *prometheus.Desc) {
+}
+
+// sriovDevCollector is initialized with the physical functions on the host. This is not updated after initialization.
+func createSriovDevCollector() prometheus.Collector {
+	devs := getSriovDevAddrs()
+	numaNodes := getNumaNodes(devs)
+
+	return sriovDevCollector{
+		name:            vfStatsCollectorName,
+		pfsWithNumaInfo: numaNodes,
 	}
-	for _, device := range devs {
-		if isSriovNetPF(device.Name()) {
-			sriovPFs = append(sriovPFs, device.Name())
+}
+
+// getSriovDevAddrs returns the PCI addresses of the SRIOV capable Physical Functions on the host.
+func getSriovDevAddrs() []string {
+	sriovDevs := make([]string, 0)
+
+	devs, err := fs.Glob(devfs, "*/sriov_totalvfs")
+	if err != nil {
+		log.Printf("Invalid pattern\n%v", err) // unreachable code
+	}
+
+	if len(devs) == 0 {
+		log.Printf("no sriov net devices found")
+	}
+
+	for _, dev := range devs {
+		devAddr := filepath.Dir(dev)
+		if isNetDevice(filepath.Join(devAddr, netClassFile)) {
+			sriovDevs = append(sriovDevs, devAddr)
 		}
 	}
-	if len(sriovPFs) == 0 {
-		return sriovPFs, errors.New("no sriov net devices found on host")
-	}
-	return sriovPFs, nil
+
+	return sriovDevs
 }
 
-//isSriovNetPF checks if is device SRIOV capable net device. It checks if the sriov_totalvfs file exists for the given PCI address
-func isSriovNetPF(pciAddr string) bool {
-	totalVfFilePath := filepath.Join(*sysBusPci, pciAddr, totalVfFile)
-	devClassFilePath := filepath.Join(*sysBusPci, pciAddr, netClassFile)
-	if !isNetDevice(devClassFilePath) {
-		return false
+// getSriovDev returns a sriovDev record containing the physical function interface name, stats reader and initialized virtual functions.
+func getSriovDev(pfAddr string, priority []string) sriovDev {
+	name := getPFName(pfAddr)
+	vfs, err := vfList(pfAddr)
+	if err != nil {
+		log.Printf("error getting vf address\n%v", err)
 	}
-	if _, err := os.Stat(totalVfFilePath); err != nil {
-		return false
+
+	return sriovDev{
+		name,
+		getStatsReader(name, priority),
+		vfs,
 	}
-	return true
 }
 
-//isNetDevice checks if the device is a net device by checking its device class
+// getNumaNodes returns the numa location for each of the PFs with SR-IOV capabilities
+func getNumaNodes(devs []string) map[string]string {
+	pfNumaInfo := make(map[string]string)
+
+	for _, dev := range devs {
+		numaFilepath := filepath.Join(dev, "numa_node")
+		numaRaw, err := fs.ReadFile(devfs, numaFilepath)
+		if err != nil {
+			log.Printf("could not read numa_node file for device '%s'\n%v", dev, err)
+			pfNumaInfo[dev] = ""
+			continue
+		}
+
+		numaNode := strings.TrimSpace(string(numaRaw))
+		if numaNode == noNumaInfo {
+			log.Printf("no numa node information for device '%s'", dev)
+			pfNumaInfo[dev] = ""
+			continue
+		}
+
+		pfNumaInfo[dev] = numaNode
+	}
+
+	return pfNumaInfo
+}
+
+// vfList returns the virtual functions associated with the specified SRIOV physical function
+func vfList(dev string) (vfsPCIAddr, error) {
+	vfList := make(vfsPCIAddr, 0)
+
+	vfs, err := fs.Glob(devfs, filepath.Join(dev, "virtfn*"))
+	if err != nil {
+		log.Printf("Invalid pattern\n%v", err) // unreachable code
+	}
+
+	// Read all VF directories and add VF PCI addr to the vfList
+	for _, vf := range vfs {
+		if id, link := vfData(vf); id != "" && link != "" {
+			vfList[id] = link
+		}
+	}
+
+	if len(vfList) == 0 {
+		return vfList, fmt.Errorf("no virtual functions found for pf '%s'", dev)
+	}
+
+	return vfList, nil
+}
+
+// vfData gets vf id and pci address from the path specified
+func vfData(vfDir string) (string, string) {
+	if link, err := utils.EvalSymlinks(filepath.Join(*sysBusPci, vfDir)); err == nil {
+		return filepath.Base(vfDir)[6:], filepath.Base(link)
+	} else {
+		log.Printf("error evaluating symlink '%s'\n%v", vfDir, err)
+		return "", ""
+	}
+}
+
+// getPFName resolves the system's name for a physical interface from the PCI address linked to it.
+func getPFName(device string) string {
+	pfDevPath := filepath.Join(device, pfNameFile)
+	pfdir, err := fs.ReadDir(devfs, pfDevPath)
+	if err != nil || len(pfdir) == 0 {
+		log.Printf("%s - could not get pf interface name in path '%s'\n%v", device, pfDevPath, err)
+		return ""
+	}
+
+	return pfdir[0].Name()
+}
+
+// isNetDevice checks if the device is a net device by checking its device class
 func isNetDevice(filepath string) bool {
-	file, err := ioutil.ReadFile(filepath)
+	file, err := fs.ReadFile(devfs, filepath)
 	if err != nil {
 		return false
 	}
+
 	classHex := strings.TrimSpace(string(file))
 	deviceClass, err := strconv.ParseInt(classHex, 0, 64)
 	if err != nil {
 		log.Printf("could not parse class file: %v", err)
 		return false
 	}
+
 	return deviceClass == netClass
 }
 
-//getPCIDevs returns all of the PCI device files available on the host
-func getPCIDevs() []os.FileInfo {
-	links, err := ioutil.ReadDir(*sysBusPci)
-	if err != nil {
-		return make([]os.FileInfo, 0)
+func resolveSriovDevFilepaths() error {
+	if err := utils.ResolveFlag("path.sysbuspci", sysBusPci); err != nil {
+		return err
 	}
-	return links
-}
 
-//vfList returns the Virtual Functions associated with a specific SRIOV Physical Function
-func vfList(pfAddress string) (vfWithRoot, error) {
-	vfList := make(vfWithRoot, 0)
-	pfDir := filepath.Join(*sysBusPci, pfAddress)
-	_, err := os.Lstat(pfDir)
-	if err != nil {
-		err = fmt.Errorf("could not get PF directory information for device: %s, Err: %v", pfAddress, err)
-		return vfList, err
+	if err := utils.ResolveFlag("path.sysclassnet", sysClassNet); err != nil {
+		return err
 	}
-	vfDirs, err := filepath.Glob(filepath.Join(pfDir, "virtfn*"))
-	if err != nil {
-		err = fmt.Errorf("error reading VF directories %v", err)
-		return vfList, err
-	}
-	//Read all VF directory and get add VF PCI addr to the vfList
-	for _, dir := range vfDirs {
-		dirInfo, err := os.Lstat(dir)
-		if err == nil && (dirInfo.Mode()&os.ModeSymlink != 0) {
-			linkName, err := filepath.EvalSymlinks(dir)
-			if err == nil {
-				vfLink := filepath.Base(linkName)
-				vfID := dirInfo.Name()[6:]
-				vfList[vfID] = vfLink
-			}
-		}
-	}
-	return vfList, nil
-}
 
-//getPFName resolves the system's name for a physical interface from the PCI address linked to it.
-func getPFName(device string) string {
-	pfdir, err := ioutil.ReadDir(filepath.Join(*sysBusPci, device, pfNameFile))
-	if err != nil || len(pfdir) == 0 {
-		log.Printf("Could not get name for pf: %v", err)
-		return ""
-	}
-	return pfdir[0].Name()
-}
+	devfs = os.DirFS(*sysBusPci)
+	netfs = os.DirFS(*sysClassNet)
 
-//Describe isn't implemented for this collector
-func (c sriovdevCollector) Describe(chan<- *prometheus.Desc) {
-}
-
-func ResolveSriovDevFilepaths() {
-	utils.ResolvePath(sysBusPci)
-	utils.ResolvePath(sysClassNet)
+	return nil
 }
