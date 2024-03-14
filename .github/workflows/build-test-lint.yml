@@ -1,12 +1,16 @@
 name: build-test-lint
 on: [push, pull_request]
+
+env:
+  BUILD_PLATFORMS: linux/amd64,linux/arm64,linux/ppc64le
+
 jobs:
   build:
     name: build
     strategy:
       matrix:
         go-version: [1.18.x]
-        goarch: [amd64]
+        goarch: [amd64,arm64,ppc64le]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -23,6 +27,29 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           GOOS: ${{ matrix.goos }}
         run: make build
+
+  build-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      # Add support for more platforms with QEMU (optional)
+      # https://github.com/docker/setup-qemu-action
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push container image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          platforms: ${{ env.BUILD_PLATFORMS }}
+          file: ./Dockerfile
+
 
   test:
     runs-on: ubuntu-latest
