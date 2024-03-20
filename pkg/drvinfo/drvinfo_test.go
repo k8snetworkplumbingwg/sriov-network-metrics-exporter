@@ -80,6 +80,7 @@ var _ = Describe("drvinfo", func() {
 		Entry("return true if driver is supported", getTestDrv(), true, NewSupportedDrivers(getDbFilePath())),
 		Entry("return false if driver is not supported", &DriverInfo{Name: "ice", Version: "1.8.1"}, false, NewSupportedDrivers(getDbFilePath())),
 		Entry("return true if driver version is greater than supported", &DriverInfo{Name: "ice", Version: "1.10.1"}, true, NewSupportedDrivers(getDbFilePath())),
+		Entry("return true if driver version is greater than supported and includes underscore", &DriverInfo{Name: "ice", Version: "1.10.1-x86_64"}, true, NewSupportedDrivers(getDbFilePath())),
 	)
 
 	DescribeTable("readSupportedDrivers should", func(testDrv *DriverInfo) {

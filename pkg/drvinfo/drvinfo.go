@@ -3,6 +3,7 @@ package drvinfo
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/go-version"
 	"github.com/safchain/ethtool"
@@ -69,11 +70,17 @@ func (dl *SupportedDrivers) IsDriverSupported(drv *DriverInfo) bool {
 		if d.Name != drv.Name {
 			continue
 		}
-		supported, err := version.NewVersion(d.Version)
+
+		// Remove underscores to keep goversion happy
+		// See: https://github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/issues/31
+		dVersionSanitized := strings.ReplaceAll(d.Version, "_", "")
+		drvVersionSanitized := strings.ReplaceAll(drv.Version, "_", "")
+
+		supported, err := version.NewVersion(dVersionSanitized)
 		if err != nil {
 			continue
 		}
-		v, err := version.NewVersion(drv.Version)
+		v, err := version.NewVersion(drvVersionSanitized)
 		if err != nil {
 			continue
 		}
