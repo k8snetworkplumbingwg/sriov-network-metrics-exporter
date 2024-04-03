@@ -1,0 +1,5 @@
+drivers:
+  - name: ice
+    version: 1.9.11
+  - name: mlx5_core
+    version: 5.15.0-53-generic

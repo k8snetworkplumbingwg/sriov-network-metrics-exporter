@@ -21,7 +21,7 @@ var _ = DescribeTable("test getting stats reader for pf", // getStatsReader
 		}
 
 		// TODO: replace with fstest.MapFS entry
-		supportedDrivers = drvinfo.SupportedDrivers{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
+		supportedDrivers = &drvinfo.SupportedDriversDbFile{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
 
 		statsReader := getStatsReader(pf, priority)
 

@@ -20,22 +20,21 @@ import (
 )
 
 const (
-	noNumaInfo             = "-1"
-	supportedDriversDbPath = "/etc/sriov-network-metrics-exporter/drivers.yaml"
+	noNumaInfo = "-1"
 )
 
 var (
-	collectorPriority    utils.StringListFlag
-	defaultPriority            = utils.StringListFlag{"sysfs", "netlink"}
-	sysBusPci                  = flag.String("path.sysbuspci", "/sys/bus/pci/devices", "Path to sys/bus/pci/devices/ on host")
-	sysClassNet                = flag.String("path.sysclassnet", "/sys/class/net", "Path to sys/class/net/ on host")
-	pfNameFile                 = "net"
-	netClassFile               = "class"
-	netClass             int64 = 0x020000
-	vfStatsSubsystem           = "vf"
-	vfStatsCollectorName       = "vfstats"
-
-	supportedDrivers drvinfo.SupportedDrivers
+	collectorPriority      utils.StringListFlag
+	defaultPriority              = utils.StringListFlag{"sysfs", "netlink"}
+	sysBusPci                    = flag.String("path.sysbuspci", "/sys/bus/pci/devices", "Path to sys/bus/pci/devices/ on host")
+	sysClassNet                  = flag.String("path.sysclassnet", "/sys/class/net", "Path to sys/class/net/ on host")
+	supportedDriversDbPath       = flag.String("path.supported-drivers-version-db", "", "Path to a yaml file which describes the supported version for each driver")
+	pfNameFile                   = "net"
+	netClassFile                 = "class"
+	netClass               int64 = 0x020000
+	vfStatsSubsystem             = "vf"
+	vfStatsCollectorName         = "vfstats"
+	supportedDrivers       drvinfo.SupportedDrivers
 
 	devfs fs.FS
 	netfs fs.FS
@@ -47,8 +46,22 @@ type vfsPCIAddr map[string]string
 // init runs the registration for this collector on package import
 func init() {
 	flag.Var(&collectorPriority, "collector.vfstatspriority", "Priority of collectors")
-	supportedDrivers = drvinfo.NewSupportedDrivers(supportedDriversDbPath)
+
 	register(vfStatsCollectorName, enabled, createSriovDevCollector)
+}
+
+func resolveSupportedDriverVersionDbPath() error {
+	if *supportedDriversDbPath == "" {
+		supportedDrivers = drvinfo.NewStubSupportedDrivers()
+		return nil
+	}
+
+	if err := utils.ResolveFlag("path.supported-drivers-version-db", supportedDriversDbPath); err != nil {
+		return err
+	}
+
+	supportedDrivers = drvinfo.NewSupportedDrivers(*supportedDriversDbPath)
+	return nil
 }
 
 // This is the generic collector for VF stats.

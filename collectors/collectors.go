@@ -61,6 +61,7 @@ func ResolveFilepaths() error {
 		resolveSriovDevFilepaths,
 		resolveKubePodCPUFilepaths,
 		resolveKubePodDeviceFilepaths,
+		resolveSupportedDriverVersionDbPath,
 	}
 
 	for _, resolveFunc := range resolveFuncs {

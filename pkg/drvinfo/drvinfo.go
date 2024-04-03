@@ -32,13 +32,17 @@ type DriversList struct {
 	Drivers []DriverInfo
 }
 
-type SupportedDrivers struct {
+type SupportedDrivers interface {
+	IsDriverSupported(drv *DriverInfo) bool
+}
+
+type SupportedDriversDbFile struct {
 	Drivers    DriversList
 	DbFilePath string
 }
 
 var NewSupportedDrivers = func(fp string) SupportedDrivers {
-	retv := SupportedDrivers{}
+	retv := &SupportedDriversDbFile{}
 	supportedDrivers, err := readSupportedDrivers(fp)
 	if err != nil {
 		log.Printf("fetching supported drivers list from %s failed with error %v", fp, err)
@@ -65,7 +69,7 @@ var GetDriverInfo = func(name string) (*DriverInfo, error) {
 	}, nil
 }
 
-func (dl *SupportedDrivers) IsDriverSupported(drv *DriverInfo) bool {
+func (dl *SupportedDriversDbFile) IsDriverSupported(drv *DriverInfo) bool {
 	for _, d := range dl.Drivers.Drivers {
 		if d.Name != drv.Name {
 			continue
@@ -102,4 +106,14 @@ func readSupportedDrivers(filePath string) (*DriversList, error) {
 		return drivers, err
 	}
 	return drivers, nil
+}
+
+func NewStubSupportedDrivers() SupportedDrivers {
+	return &StubSupportedDrivers{}
+}
+
+type StubSupportedDrivers struct{}
+
+func (ssp *StubSupportedDrivers) IsDriverSupported(drv *DriverInfo) bool {
+	return true
 }

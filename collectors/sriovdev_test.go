@@ -1,12 +1,14 @@
 package collectors
 
 import (
+	"flag"
 	"fmt"
 	"io/fs"
 	"net"
 	"testing/fstest"
 
 	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/drvinfo"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/utils"
 	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/vfstats"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -32,7 +34,7 @@ var _ = DescribeTable("test vf stats collection", // Collect
 		}
 
 		// TODO: replace with fstest.MapFS entry
-		supportedDrivers = drvinfo.SupportedDrivers{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
+		supportedDrivers = &drvinfo.SupportedDriversDbFile{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
 
 		vfstats.GetLink = func(name string) (netlink.Link, error) {
 			return &link, nil
@@ -220,9 +222,8 @@ var _ = DescribeTable("test getting sriov devices from filesystem", // getSriovD
 		drvinfo.GetDriverInfo = func(name string) (*drvinfo.DriverInfo, error) {
 			return driver, nil
 		}
-
 		// TODO: replace with fstest.MapFS entry
-		supportedDrivers = drvinfo.SupportedDrivers{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
+		supportedDrivers = &drvinfo.SupportedDriversDbFile{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
 
 		devs := getSriovDevAddrs()
 		Expect(devs).To(Equal(expected))
@@ -267,7 +268,7 @@ var _ = DescribeTable("test getting sriov dev details", // getSriovDev
 		}
 
 		// TODO: replace with fstest.MapFS entry
-		supportedDrivers = drvinfo.SupportedDrivers{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
+		supportedDrivers = &drvinfo.SupportedDriversDbFile{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
 
 		sriovDev := getSriovDev(dev, priority)
 		Expect(sriovDev).To(Equal(expected))
@@ -461,3 +462,47 @@ var _ = DescribeTable("test getting pf name from pci address on filesystem", // 
 		"0000:3e:00.0 - could not get pf interface name in path '0000:3e:00.0/net'",
 		"open 0000:3e:00.0/net: file does not exist"),
 )
+
+var _ = Describe("Parameter `path.supported-drivers-version-db`", func() {
+	BeforeEach(func() {
+		tmp := utils.EvalSymlinks
+		utils.EvalSymlinks = func(x string) (string, error) { return x, nil }
+
+		DeferCleanup(func() {
+			utils.EvalSymlinks = tmp
+		})
+	})
+
+	It("is honored", func() {
+		err := flag.Set("path.supported-drivers-version-db", "./testdata/supported-drivers-version-db.yaml")
+		Expect(err).ToNot(HaveOccurred())
+		DeferCleanup(func() {
+			err = flag.Set("path.supported-drivers-version-db", "")
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		err = resolveSupportedDriverVersionDbPath()
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(
+			supportedDrivers.IsDriverSupported(&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"}),
+		).To(BeTrue())
+
+		Expect(
+			supportedDrivers.IsDriverSupported(&drvinfo.DriverInfo{Name: "ice", Version: "1.9.10"}),
+		).To(BeFalse())
+	})
+
+	It("creates a stub supported drivers when is not set", func() {
+		err := resolveSupportedDriverVersionDbPath()
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(
+			supportedDrivers.IsDriverSupported(&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"}),
+		).To(BeTrue())
+
+		Expect(
+			supportedDrivers.IsDriverSupported(&drvinfo.DriverInfo{Name: "anything", Version: "1.2.3"}),
+		).To(BeTrue())
+	})
+})
