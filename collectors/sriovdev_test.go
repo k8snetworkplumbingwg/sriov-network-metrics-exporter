@@ -6,7 +6,6 @@ import (
 	"net"
 	"testing/fstest"
 
-	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/drvinfo"
 	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/vfstats"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -21,18 +20,10 @@ var _ = AfterEach(func() {
 })
 
 var _ = DescribeTable("test vf stats collection", // Collect
-	func(priority []string, fsys fs.FS, driver *drvinfo.DriverInfo, link netlink.Device, expected []metric, logs ...string) {
+	func(priority []string, fsys fs.FS, link netlink.Device, expected []metric, logs ...string) {
 		devfs = fsys
 		netfs = fsys
 		collectorPriority = priority
-
-		// TODO: replace with ethtool mock
-		drvinfo.GetDriverInfo = func(name string) (*drvinfo.DriverInfo, error) {
-			return driver, nil
-		}
-
-		// TODO: replace with fstest.MapFS entry
-		supportedDrivers = drvinfo.SupportedDrivers{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
 
 		vfstats.GetLink = func(name string) (netlink.Link, error) {
 			return &link, nil
@@ -71,7 +62,6 @@ var _ = DescribeTable("test vf stats collection", // Collect
 			"t_ens785f0/device/sriov/0/stats/tx_packets": {Data: []byte("8")},
 			"t_ens785f0/device/sriov/1/stats/rx_packets": {Data: []byte("16")},
 			"t_ens785f0/device/sriov/1/stats/tx_packets": {Data: []byte("32")}},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
 		nil,
 		[]metric{
 			{map[string]string{"numa_node": "0", "pciAddr": "0000:1d:01.0", "pf": "t_ens785f0", "vf": "0"}, 4},
@@ -92,7 +82,6 @@ var _ = DescribeTable("test vf stats collection", // Collect
 			"0000:2e:00.0/class":          {Data: []byte("0x020000")},
 			"0000:2e:00.0/virtfn0":        {Data: []byte("/sys/devices/0000:2e:01.0"), Mode: fs.ModeSymlink},
 			"0000:2e:00.0/virtfn1":        {Data: []byte("/sys/devices/0000:2e:01.1"), Mode: fs.ModeSymlink}},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
 		netlink.Device{LinkAttrs: netlink.LinkAttrs{Vfs: []netlink.VfInfo{
 			{0, net.HardwareAddr{}, 0, 0, 0, true, 0, 0, 0, 11, 12, 13, 14, 15, 16, 17, 18, 0, 0},    //nolint:govet
 			{1, net.HardwareAddr{}, 0, 0, 0, true, 0, 0, 0, 21, 22, 23, 24, 25, 26, 27, 28, 0, 0}}}}, //nolint:govet
@@ -131,7 +120,6 @@ var _ = DescribeTable("test vf stats collection", // Collect
 			"0000:4g:00.0/numa_node":                     {Data: []byte("0")},
 			"0000:4g:00.0/class":                         {Data: []byte("0x020000")},
 			"0000:4g:00.0/virtfn0":                       {Data: []byte("/sys/devices/0000:4g:01.0"), Mode: fs.ModeSymlink}},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
 		netlink.Device{LinkAttrs: netlink.LinkAttrs{Vfs: []netlink.VfInfo{
 			{0, net.HardwareAddr{}, 0, 0, 0, true, 0, 0, 0, 31, 32, 33, 34, 35, 36, 37, 38, 0, 0}}}}, //nolint:govet
 		[]metric{
@@ -213,16 +201,8 @@ var _ = DescribeTable("test creating sriovDev collector", // createSriovDevColle
 )
 
 var _ = DescribeTable("test getting sriov devices from filesystem", // getSriovDevAddrs
-	func(fsys fs.FS, driver *drvinfo.DriverInfo, expected []string, logs ...string) {
+	func(fsys fs.FS, expected []string, logs ...string) {
 		devfs = fsys
-
-		// TODO: replace with ethtool mock
-		drvinfo.GetDriverInfo = func(name string) (*drvinfo.DriverInfo, error) {
-			return driver, nil
-		}
-
-		// TODO: replace with fstest.MapFS entry
-		supportedDrivers = drvinfo.SupportedDrivers{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
 
 		devs := getSriovDevAddrs()
 		Expect(devs).To(Equal(expected))
@@ -235,7 +215,6 @@ var _ = DescribeTable("test getting sriov devices from filesystem", // getSriovD
 			"0000:6f:00.1/sriov_totalvfs": {Data: []byte("64")}, "0000:6f:00.1/class": {Data: []byte("0x020000")},
 			"0000:7g:00.0/sriov_totalvfs": {Data: []byte("128")}, "0000:7g:00.0/class": {Data: []byte("0x020000")},
 			"0000:7g:00.1/sriov_totalvfs": {Data: []byte("128")}, "0000:7g:00.1/class": {Data: []byte("0x020000")}},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
 		[]string{"0000:6f:00.0", "0000:6f:00.1", "0000:7g:00.0", "0000:7g:00.1"}),
 	Entry("mixed devices",
 		fstest.MapFS{
@@ -243,7 +222,6 @@ var _ = DescribeTable("test getting sriov devices from filesystem", // getSriovD
 			"0000:8h:00.1/":               {Mode: fs.ModeDir},
 			"0000:9i:00.0/sriov_totalvfs": {Data: []byte("63")}, "0000:9i:00.0/class": {Data: []byte("0x020000")},
 			"0000:9i:00.1/sriov_totalvfs": {Data: []byte("63")}, "0000:9i:00.1/class": {Data: []byte("0x020000")}},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
 		[]string{"0000:9i:00.0", "0000:9i:00.1"}),
 	Entry("no sriov net devices",
 		fstest.MapFS{
@@ -251,23 +229,23 @@ var _ = DescribeTable("test getting sriov devices from filesystem", // getSriovD
 			"0000:1b:00.1/": {Mode: fs.ModeDir},
 			"0000:1b:00.2/": {Mode: fs.ModeDir},
 			"0000:1b:00.3/": {Mode: fs.ModeDir}},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
 		[]string{},
 		"no sriov net devices found"),
 )
 
 var _ = DescribeTable("test getting sriov dev details", // getSriovDev
-	func(dev string, priority []string, fsys fs.FS, driver *drvinfo.DriverInfo, expected sriovDev, logs ...string) {
+	func(dev string, priority []string, fsys fs.FS, link netlink.Link, expected sriovDev, logs ...string) {
 		devfs = fsys
 		netfs = fsys
 
-		// TODO: replace with ethtool mock
-		drvinfo.GetDriverInfo = func(name string) (*drvinfo.DriverInfo, error) {
-			return driver, nil
+		if link != nil {
+			vfstats.GetLink = func(name string) (netlink.Link, error) {
+				return link, nil
+			}
+			DeferCleanup(func() {
+				vfstats.GetLink = netlink.LinkByName
+			})
 		}
-
-		// TODO: replace with fstest.MapFS entry
-		supportedDrivers = drvinfo.SupportedDrivers{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
 
 		sriovDev := getSriovDev(dev, priority)
 		Expect(sriovDev).To(Equal(expected))
@@ -284,7 +262,7 @@ var _ = DescribeTable("test getting sriov dev details", // getSriovDev
 			"ens785f0/device/sriov":     {Mode: fs.ModeDir}, // Added to enable sysfs reader
 			"0000:5g:00.0/net/ens801f0": {Mode: fs.ModeDir},
 			"0000:5g:00.0/virtfn0":      {Data: []byte("/sys/devices/0000:5g:01.0"), Mode: fs.ModeSymlink}},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
+		nil,
 		sriovDev{
 			"ens785f0",
 			sysfsReader{"/sys/class/net/%s/device/sriov/%s/stats"},
@@ -299,7 +277,7 @@ var _ = DescribeTable("test getting sriov dev details", // getSriovDev
 			"0000:6h:00.0/virtfn1":      {Data: []byte("/sys/devices/0000:6h:01.1"), Mode: fs.ModeSymlink},
 			"0000:7i:00.0/net/ens801f0": {Mode: fs.ModeDir},
 			"0000:7i:00.0/virtfn0":      {Data: []byte("/sys/devices/0000:7i:01.0"), Mode: fs.ModeSymlink}},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
+		&netlink.Device{LinkAttrs: netlink.LinkAttrs{Vfs: []netlink.VfInfo{}}}, //nolint:govet
 		sriovDev{
 			"ens785f0",
 			netlinkReader{vfstats.VfStats("ens785f0")},
@@ -313,7 +291,7 @@ var _ = DescribeTable("test getting sriov dev details", // getSriovDev
 			"0000:8j:00.0/net/ens785f0": {Mode: fs.ModeDir},
 			"0000:8j:00.0/virtfn0":      {Data: []byte("/sys/devices/0000:8j:01.0"), Mode: fs.ModeSymlink},
 			"0000:8j:00.0/virtfn1":      {Data: []byte("/sys/devices/0000:8j:01.1"), Mode: fs.ModeSymlink}},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
+		nil,
 		sriovDev{
 			"ens785f0",
 			nil,
@@ -324,7 +302,7 @@ var _ = DescribeTable("test getting sriov dev details", // getSriovDev
 		[]string{"sysfs"},
 		fstest.MapFS{
 			"0000:9k:00.0/net/ens785f0": {Mode: fs.ModeDir}},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
+		nil,
 		sriovDev{
 			"ens785f0",
 			nil,

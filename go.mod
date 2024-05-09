@@ -3,16 +3,13 @@ module github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter
 go 1.18
 
 require (
-	github.com/hashicorp/go-version v1.6.0
 	github.com/onsi/ginkgo/v2 v2.5.1
 	github.com/onsi/gomega v1.24.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/client_model v0.2.0
-	github.com/safchain/ethtool v0.2.0
 	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8
 	google.golang.org/grpc v1.56.3
-	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/kubelet v0.25.5
 )
 
@@ -32,4 +29,5 @@ require (
 	golang.org/x/text v0.13.0 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

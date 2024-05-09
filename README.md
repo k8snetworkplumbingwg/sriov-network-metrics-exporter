@@ -9,7 +9,7 @@ The SR-IOV Network Metrics Exporter is designed with the Kubernetes SR-IOV stack
 The sysfs collector for Virtual Function telemetry supports NICs with drivers that implement the SR-IOV sysfs management interface e.g. ice, i40e, mlnx_en and mlnx_ofed.
 
 The netlink collector relies on driver support and a kernel version of 4.4 or higher.
-To support netlink, we recommend these driver versions:
+Also, the following minimum driver versions are required for this collector:
 - `i40e` - 2.11+ for Intel® 700 series NICs 
 - `ice` - 1.2+ for Intel® 800 series NICs
 - `mlx5_core` - 5.15+ for Mellanox NICs
