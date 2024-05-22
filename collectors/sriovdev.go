@@ -15,13 +15,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/utils"
-
-	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/drvinfo"
 )
 
 const (
-	noNumaInfo             = "-1"
-	supportedDriversDbPath = "/etc/sriov-network-metrics-exporter/drivers.yaml"
+	noNumaInfo = "-1"
 )
 
 var (
@@ -35,8 +32,6 @@ var (
 	vfStatsSubsystem           = "vf"
 	vfStatsCollectorName       = "vfstats"
 
-	supportedDrivers drvinfo.SupportedDrivers
-
 	devfs fs.FS
 	netfs fs.FS
 )
@@ -47,7 +42,6 @@ type vfsPCIAddr map[string]string
 // init runs the registration for this collector on package import
 func init() {
 	flag.Var(&collectorPriority, "collector.vfstatspriority", "Priority of collectors")
-	supportedDrivers = drvinfo.NewSupportedDrivers(supportedDriversDbPath)
 	register(vfStatsCollectorName, enabled, createSriovDevCollector)
 }
 
