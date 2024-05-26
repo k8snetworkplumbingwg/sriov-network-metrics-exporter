@@ -28,9 +28,6 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/hashicorp/go-version v1.6.0
-## explicit
-github.com/hashicorp/go-version
 # github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 ## explicit; go 1.9
 github.com/matttproud/golang_protobuf_extensions/pbutil
@@ -77,9 +74,6 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/safchain/ethtool v0.2.0
-## explicit; go 1.16
-github.com/safchain/ethtool
 # github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852
 ## explicit; go 1.12
 github.com/vishvananda/netlink
