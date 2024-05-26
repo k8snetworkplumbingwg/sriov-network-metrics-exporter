@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/drvinfo"
 	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/utils"
 	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/vfstats"
 )
@@ -49,18 +48,12 @@ func getStatsReader(pf string, priority []string) sriovStatReader {
 
 			log.Printf("%s does not support sysfs collector, directory '%s' does not exist", pf, filepath.Join(pf, "/device/sriov"))
 		case "netlink":
-			info, err := drvinfo.GetDriverInfo(pf)
-			if err != nil {
-				log.Printf("failed to get driver info error %v", err)
-				return nil
-			}
-
-			if supportedDrivers.IsDriverSupported(info) {
+			if vfstats.DoesPfSupportNetlink(pf) {
 				log.Printf("%s - using netlink collector", pf)
 				return netlinkReader{vfstats.VfStats(pf)}
 			}
 
-			log.Printf("%s does not support netlink collector, %+v driver not supported", pf, info)
+			log.Printf("%s does not support netlink collector", pf)
 		default:
 			log.Printf("%s - '%s' collector not supported", pf, collector)
 		}
