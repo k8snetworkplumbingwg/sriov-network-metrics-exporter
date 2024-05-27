@@ -29,4 +29,10 @@ func VfStats(pf string) PerPF {
 	return output
 }
 
+// DoesPfSupportNetlink returns true if the Physical Function supports the netlink APIs
+func DoesPfSupportNetlink(pf string) bool {
+	_, err := GetLink(pf)
+	return err == nil
+}
+
 var GetLink = netlink.LinkByName

@@ -4,24 +4,25 @@ import (
 	"io/fs"
 	"testing/fstest"
 
-	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/drvinfo"
 	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/vfstats"
+	"github.com/vishvananda/netlink"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = DescribeTable("test getting stats reader for pf", // getStatsReader
-	func(pf string, priority []string, fsys fs.FS, driver *drvinfo.DriverInfo, expected sriovStatReader, logs ...string) {
+	func(pf string, priority []string, fsys fs.FS, link netlink.Link, expected sriovStatReader, logs ...string) {
 		netfs = fsys
 
-		// TODO: replace with ethtool mock
-		drvinfo.GetDriverInfo = func(name string) (*drvinfo.DriverInfo, error) {
-			return driver, nil
+		if link != nil {
+			vfstats.GetLink = func(name string) (netlink.Link, error) {
+				return link, nil
+			}
+			DeferCleanup(func() {
+				vfstats.GetLink = netlink.LinkByName
+			})
 		}
-
-		// TODO: replace with fstest.MapFS entry
-		supportedDrivers = drvinfo.SupportedDrivers{Drivers: drvinfo.DriversList{Drivers: []drvinfo.DriverInfo{*driver}}, DbFilePath: ""}
 
 		statsReader := getStatsReader(pf, priority)
 
@@ -37,14 +38,14 @@ var _ = DescribeTable("test getting stats reader for pf", // getStatsReader
 		"ens785f0",
 		[]string{"sysfs", "netlink"},
 		fstest.MapFS{"ens785f0/device/sriov": {Mode: fs.ModeDir}},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
+		nil,
 		sysfsReader{"/sys/class/net/%s/device/sriov/%s/stats"},
 		"ens785f0 - using sysfs collector"),
 	Entry("without sysfs support",
 		"ens785f0",
 		[]string{"sysfs", "netlink"},
 		fstest.MapFS{},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
+		&netlink.Device{LinkAttrs: netlink.LinkAttrs{Vfs: []netlink.VfInfo{}}}, //nolint:govet
 		netlinkReader{vfstats.VfStats("ens785f0")},
 		"ens785f0 does not support sysfs collector",
 		"ens785f0 - using netlink collector"),
@@ -52,7 +53,7 @@ var _ = DescribeTable("test getting stats reader for pf", // getStatsReader
 		"ens785f0",
 		[]string{"unsupported_collector"},
 		fstest.MapFS{},
-		&drvinfo.DriverInfo{Name: "ice", Version: "1.9.11"},
+		nil,
 		nil,
 		"ens785f0 - 'unsupported_collector' collector not supported"),
 )
