@@ -27,7 +27,7 @@ spec:
         - --path.kubeletsocket=/host/kubelet.sock
         - --collector.kubepoddevice=true
         - --collector.vfstatspriority=sysfs,netlink
-        image: localhost:5000/sriov-metrics-exporter
+        image: ghcr.io/k8snetworkplumbingwg/sriov-network-metrics-exporter:latest
         imagePullPolicy: Always 
         name: sriov-metrics-exporter
         resources:
