@@ -47,23 +47,10 @@ For example, to get the VF along with the application name from the standard Kub
 Once available through Prometheus VF metrics can be used by metrics applications like Grafana, or the Horizontal Pod Autoscaler.
 
 ## Installation
+
 ### Kubernetes installation
 
-#### Building images
 Typical deployment is as a daemonset in a cluster. A daemonset requires the image to be available on each node in the cluster or at a registry accessible from each node.
-The following assumes a local Docker registry available at localhost:5000, and assumes Docker is being used to build and manage containers in the cluster.
-
-In order to build the container and load it to a local registry run:
-
-```
-docker build . -t localhost:5000/sriov-metrics-exporter && docker push localhost:5000/sriov-metrics-exporter
-
-or
-
-make docker-build && make docker-push
-```
-
-The above assumes a registry available across the cluster at localhost:5000, for example on using the [Docker Registry Proxy](https://github.com/kubernetes-sigs/kubespray/blob/master/roles/kubernetes-apps/registry/README.md). If your registry is at a different address the image name will need to be changed to reflect that in the [Kubernetes daemonset](/deployment/daemonset.yaml)
 
 #### Labeling nodes
 
@@ -123,6 +110,27 @@ In order to expose these metrics to Prometheus we need to configure the database
 The above should be added to the Prometheus configuration as a new target. For more about configuring Prometheus see the [official guide.](https://prometheus.io/docs/prometheus/latest/configuration/configuration/) Once Prometheus is started with this included in its config sriov-metrics should appear on the "Targets page". Metrics should be available by querying the Prometheus API or in the web interface.
 
 In this mode it will serve stats on an endpoint inside the cluster. Prometheus will detect the label on the service endpoint through the above configuration.
+
+#### Building images (optional)
+
+Rather than using the Docker image available from GHCR, you may prefer to build the Docker image.
+
+The following assumes a local Docker registry available at localhost:5000, and assumes Docker is being used to build and manage containers in the cluster.
+
+In order to build the container and load it to a local registry run:
+
+```
+docker build . -t localhost:5000/sriov-metrics-exporter && docker push localhost:5000/sriov-metrics-exporter
+```
+or
+```
+make docker-build && make docker-push
+```
+
+The above assumes a registry available across the cluster at localhost:5000, for example on using the [Docker Registry Proxy](https://github.com/kubernetes-sigs/kubespray/blob/master/roles/kubernetes-apps/registry/README.md).
+
+Update the docker image path in `deployment/daemonset.yaml` as required e.g. `image: localhost:5000/sriov-metrics-exporter`.
+
 
 ### Standalone installation to an endpoint on the host. 
 
