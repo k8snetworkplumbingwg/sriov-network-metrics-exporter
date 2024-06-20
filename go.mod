@@ -1,6 +1,6 @@
 module github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter
 
-go 1.18
+go 1.22
 
 require (
 	github.com/onsi/ginkgo/v2 v2.5.1
