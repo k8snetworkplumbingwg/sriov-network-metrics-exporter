@@ -74,7 +74,7 @@ spec:
         name: kubeletsocket
       - hostPath:
           path: /sys/fs/cgroup/cpuset/kubepods.slice/
-          type: "Directory"
+          type: "DirectoryOrCreate"
         name: kubecgroup
       - hostPath:
           path: /var/lib/kubelet/cpu_manager_state
@@ -82,15 +82,15 @@ spec:
         name: cpucheckpoint
       - hostPath:
           path: /sys/class/net
-          type: "Directory"
+          type: "DirectoryOrCreate"
         name: sysclassnet
       - hostPath:
           path: /sys/bus/pci/devices
-          type: "Directory"
+          type: "DirectoryOrCreate"
         name: sysbuspcidevices
       - hostPath:
           path: /sys/devices
-          type: "Directory"
+          type: "DirectoryOrCreate"
         name: sysdevices
 ---
 apiVersion: v1
