@@ -9,6 +9,6 @@ FROM registry.ci.openshift.org/ocp/4.17:base-rhel9
 LABEL io.k8s.display-name="OpenShift SR-IOV Network Metrics Exporter-operator"
 LABEL io.k8s.description="This component exports metrics related to VF configured through the SR-IOV network operator."
 
-COPY --from=builder /usr/src/sriov-network-metrics-exporter/bin/* /usr/bin/
+COPY --from=builder /usr/src/sriov-network-metrics-exporter/build/* /usr/bin/
 EXPOSE 9808
 ENTRYPOINT ["sriov-exporter"]
