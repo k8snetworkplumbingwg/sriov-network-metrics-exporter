@@ -3,7 +3,7 @@ FROM registry.ci.openshift.org/ocp/builder:rhel-9-golang-1.22-openshift-4.17 AS 
 WORKDIR /usr/src/sriov-network-metrics-exporter
 COPY . .
 
-RUN make clean && make build
+RUN make clean && GO_TAGS="" GO_BUILD_OPTS=CGO_ENABLED=1 make build
 
 FROM registry.ci.openshift.org/ocp/4.17:base-rhel9
 LABEL io.k8s.display-name="OpenShift SR-IOV Network Metrics Exporter-operator"
