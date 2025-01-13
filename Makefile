@@ -52,7 +52,7 @@ test-coverage:
 	go tool cover -func cover.out
 
 go-lint-install:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.49
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
 
 go-lint: go-lint-install
 	go mod tidy
