@@ -59,6 +59,18 @@ var _ = DescribeTable("test getting stats reader for pf", // getStatsReader
 		nil,
 		nil,
 		"ens785f0 - 'unsupported_collector' collector not supported"),
+	Entry("sysfs present but returns no stats, fallback to netlink",
+		"ens785f0",
+		[]string{"sysfs", "netlink"},
+		fstest.MapFS{
+			"ens785f0/device/sriov": {Mode: fs.ModeDir},
+			// sysfs stats file exists but is empty (simulates no stats)
+			"ens785f0/device/sriov/0/stats/rx_packets": {Data: []byte("")},
+		},
+		&netlink.Device{LinkAttrs: netlink.LinkAttrs{Vfs: []netlink.VfInfo{{ID: 0, TxPackets: 42}}}},
+		netlinkReader{vfstats.PerPF{Pf: "ens785f0", Vfs: map[int]netlink.VfInfo{0: {ID: 0, TxPackets: 42}}}},
+		"ens785f0 - sysfs collector present but no stats found for vf0",
+		"ens785f0 - using netlink collector"),
 )
 
 var _ = DescribeTable("test getting reading stats through sriov sysfs interface", // sysfsReader.ReadStats
