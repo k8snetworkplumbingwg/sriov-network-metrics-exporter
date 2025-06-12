@@ -38,22 +38,36 @@ type sysfsReader struct {
 // getStatsReader returns the correct stat reader for the given PF
 // Currently only drivers that implement netlink or the sriov sysfs interface are supported
 func getStatsReader(pf string, priority []string) sriovStatReader {
+	// Try to find a collector that can actually read stats for at least VF 0
+	vfTestID := "0"
 	for _, collector := range priority {
 		switch collector {
 		case "sysfs":
 			if _, err := fs.Stat(netfs, filepath.Join(pf, "/device/sriov")); !os.IsNotExist(err) {
-				log.Printf("%s - using sysfs collector", pf)
-				return sysfsReader{filepath.Join(*sysClassNet, "%s/device/sriov/%s/stats/")}
+				reader := sysfsReader{filepath.Join(*sysClassNet, "%s/device/sriov/%s/stats/")}
+				// Test if sysfsReader can read stats for VF 0
+				if stats := reader.ReadStats(pf, vfTestID); len(stats) > 0 {
+					log.Printf("%s - using sysfs collector", pf)
+					return reader
+				} else {
+					log.Printf("%s - sysfs collector present but no stats found for vf%s", pf, vfTestID)
+				}
+			} else {
+				log.Printf("%s does not support sysfs collector, directory '%s' does not exist", pf, filepath.Join(pf, "/device/sriov"))
 			}
-
-			log.Printf("%s does not support sysfs collector, directory '%s' does not exist", pf, filepath.Join(pf, "/device/sriov"))
 		case "netlink":
 			if vfstats.DoesPfSupportNetlink(pf) {
-				log.Printf("%s - using netlink collector", pf)
-				return netlinkReader{vfstats.VfStats(pf)}
+				reader := netlinkReader{vfstats.VfStats(pf)}
+				// Test if netlinkReader can read stats for VF 0
+				if stats := reader.ReadStats(pf, vfTestID); len(stats) > 0 {
+					log.Printf("%s - using netlink collector", pf)
+					return reader
+				} else {
+					log.Printf("%s - netlink collector present but no stats found for vf%s", pf, vfTestID)
+				}
+			} else {
+				log.Printf("%s does not support netlink collector", pf)
 			}
-
-			log.Printf("%s does not support netlink collector", pf)
 		default:
 			log.Printf("%s - '%s' collector not supported", pf, collector)
 		}

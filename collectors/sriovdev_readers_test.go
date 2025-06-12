@@ -37,7 +37,10 @@ var _ = DescribeTable("test getting stats reader for pf", // getStatsReader
 	Entry("with sysfs support",
 		"ens785f0",
 		[]string{"sysfs", "netlink"},
-		fstest.MapFS{"ens785f0/device/sriov": {Mode: fs.ModeDir}},
+		fstest.MapFS{
+			"ens785f0/device/sriov":                    {Mode: fs.ModeDir},
+			"ens785f0/device/sriov/0/stats/rx_packets": {Data: []byte("1")}, // Added to enable sysfsReader
+		},
 		nil,
 		sysfsReader{"/sys/class/net/%s/device/sriov/%s/stats"},
 		"ens785f0 - using sysfs collector"),
