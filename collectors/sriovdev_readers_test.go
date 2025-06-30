@@ -24,12 +24,14 @@ var _ = DescribeTable("test getting stats reader for pf", // getStatsReader
 			})
 		}
 
-		statsReader := getStatsReader(pf, priority)
+		statsReader, err := getStatsReader(pf, priority)
 
 		if expected != nil {
 			Expect(statsReader).To(Equal(expected))
+			Expect(err).To(BeNil())
 		} else {
 			Expect(statsReader).To(BeNil())
+			Expect(err).To(HaveOccurred())
 		}
 
 		assertLogs(logs)

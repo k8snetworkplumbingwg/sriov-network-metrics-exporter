@@ -144,9 +144,14 @@ func getSriovDev(pfAddr string, priority []string) sriovDev {
 		log.Printf("error getting vf address\n%v", err)
 	}
 
+	reader, err := getStatsReader(name, priority)
+	if err != nil {
+		log.Printf("error getting stats reader for %s: %v", name, err)
+	}
+
 	return sriovDev{
 		name,
-		getStatsReader(name, priority),
+		reader,
 		vfs,
 	}
 }

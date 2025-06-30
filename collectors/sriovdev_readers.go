@@ -35,9 +35,15 @@ type sysfsReader struct {
 	statsFS string
 }
 
+// check if a reader can read stats for a given pf and vfID
+func readerHasStats(reader sriovStatReader, pfName, vfID string) bool {
+	stats := reader.ReadStats(pfName, vfID)
+	return len(stats) > 0
+}
+
 // getStatsReader returns the correct stat reader for the given PF
 // Currently only drivers that implement netlink or the sriov sysfs interface are supported
-func getStatsReader(pf string, priority []string) sriovStatReader {
+func getStatsReader(pf string, priority []string) (sriovStatReader, error) {
 	// Try to find a collector that can actually read stats for at least VF 0
 	vfTestID := "0"
 	for _, collector := range priority {
@@ -46,9 +52,9 @@ func getStatsReader(pf string, priority []string) sriovStatReader {
 			if _, err := fs.Stat(netfs, filepath.Join(pf, "/device/sriov")); !os.IsNotExist(err) {
 				reader := sysfsReader{filepath.Join(*sysClassNet, "%s/device/sriov/%s/stats/")}
 				// Test if sysfsReader can read stats for VF 0
-				if stats := reader.ReadStats(pf, vfTestID); len(stats) > 0 {
+				if readerHasStats(reader, pf, vfTestID) {
 					log.Printf("%s - using sysfs collector", pf)
-					return reader
+					return reader, nil
 				} else {
 					log.Printf("%s - sysfs collector present but no stats found for vf%s", pf, vfTestID)
 				}
@@ -59,9 +65,9 @@ func getStatsReader(pf string, priority []string) sriovStatReader {
 			if vfstats.DoesPfSupportNetlink(pf) {
 				reader := netlinkReader{vfstats.VfStats(pf)}
 				// Test if netlinkReader can read stats for VF 0
-				if stats := reader.ReadStats(pf, vfTestID); len(stats) > 0 {
+				if readerHasStats(reader, pf, vfTestID) {
 					log.Printf("%s - using netlink collector", pf)
-					return reader
+					return reader, nil
 				} else {
 					log.Printf("%s - netlink collector present but no stats found for vf%s", pf, vfTestID)
 				}
@@ -72,7 +78,7 @@ func getStatsReader(pf string, priority []string) sriovStatReader {
 			log.Printf("%s - '%s' collector not supported", pf, collector)
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("no stats reader found for %s", pf)
 }
 
 // ReadStats takes in the name of a PF and the VF Id and returns a stats object.
