@@ -24,12 +24,14 @@ var _ = DescribeTable("test getting stats reader for pf", // getStatsReader
 			})
 		}
 
-		statsReader := getStatsReader(pf, priority)
+		statsReader, err := getStatsReader(pf, priority)
 
 		if expected != nil {
 			Expect(statsReader).To(Equal(expected))
+			Expect(err).To(BeNil())
 		} else {
 			Expect(statsReader).To(BeNil())
+			Expect(err).To(HaveOccurred())
 		}
 
 		assertLogs(logs)
@@ -37,7 +39,10 @@ var _ = DescribeTable("test getting stats reader for pf", // getStatsReader
 	Entry("with sysfs support",
 		"ens785f0",
 		[]string{"sysfs", "netlink"},
-		fstest.MapFS{"ens785f0/device/sriov": {Mode: fs.ModeDir}},
+		fstest.MapFS{
+			"ens785f0/device/sriov":                    {Mode: fs.ModeDir},
+			"ens785f0/device/sriov/0/stats/rx_packets": {Data: []byte("1")}, // Added to enable sysfsReader
+		},
 		nil,
 		sysfsReader{"/sys/class/net/%s/device/sriov/%s/stats"},
 		"ens785f0 - using sysfs collector"),
@@ -56,6 +61,18 @@ var _ = DescribeTable("test getting stats reader for pf", // getStatsReader
 		nil,
 		nil,
 		"ens785f0 - 'unsupported_collector' collector not supported"),
+	Entry("sysfs present but returns no stats, fallback to netlink",
+		"ens785f0",
+		[]string{"sysfs", "netlink"},
+		fstest.MapFS{
+			"ens785f0/device/sriov": {Mode: fs.ModeDir},
+			// sysfs stats file exists but is empty (simulates no stats)
+			"ens785f0/device/sriov/0/stats/rx_packets": {Data: []byte("")},
+		},
+		&netlink.Device{LinkAttrs: netlink.LinkAttrs{Vfs: []netlink.VfInfo{{ID: 0, TxPackets: 42}}}},
+		netlinkReader{vfstats.PerPF{Pf: "ens785f0", Vfs: map[int]netlink.VfInfo{0: {ID: 0, TxPackets: 42}}}},
+		"ens785f0 - sysfs collector present but no stats found for vf0",
+		"ens785f0 - using netlink collector"),
 )
 
 var _ = DescribeTable("test getting reading stats through sriov sysfs interface", // sysfsReader.ReadStats

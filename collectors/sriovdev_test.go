@@ -3,7 +3,6 @@ package collectors
 import (
 	"fmt"
 	"io/fs"
-	"net"
 	"testing/fstest"
 
 	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/vfstats"
@@ -83,8 +82,9 @@ var _ = DescribeTable("test vf stats collection", // Collect
 			"0000:2e:00.0/virtfn0":        {Data: []byte("/sys/devices/0000:2e:01.0"), Mode: fs.ModeSymlink},
 			"0000:2e:00.0/virtfn1":        {Data: []byte("/sys/devices/0000:2e:01.1"), Mode: fs.ModeSymlink}},
 		netlink.Device{LinkAttrs: netlink.LinkAttrs{Vfs: []netlink.VfInfo{
-			{0, net.HardwareAddr{}, 0, 0, 0, true, 0, 0, 0, 11, 12, 13, 14, 15, 16, 17, 18, 0, 0},    //nolint:govet
-			{1, net.HardwareAddr{}, 0, 0, 0, true, 0, 0, 0, 21, 22, 23, 24, 25, 26, 27, 28, 0, 0}}}}, //nolint:govet
+			{ID: 0, Mac: nil, Vlan: 0, Qos: 0, TxRate: 0, Spoofchk: true, LinkState: 0, MaxTxRate: 0, MinTxRate: 0, RxPackets: 11, TxPackets: 12, RxBytes: 13, TxBytes: 14, Multicast: 15, Broadcast: 16, RxDropped: 17, TxDropped: 18, RssQuery: 0, Trust: 0},
+			{ID: 1, Mac: nil, Vlan: 0, Qos: 0, TxRate: 0, Spoofchk: true, LinkState: 0, MaxTxRate: 0, MinTxRate: 0, RxPackets: 21, TxPackets: 22, RxBytes: 23, TxBytes: 24, Multicast: 25, Broadcast: 26, RxDropped: 27, TxDropped: 28, RssQuery: 0, Trust: 0},
+		}}},
 		[]metric{
 			{map[string]string{"numa_node": "0", "pciAddr": "0000:2e:01.0", "pf": "t_ens801f0", "vf": "0"}, 11},
 			{map[string]string{"numa_node": "0", "pciAddr": "0000:2e:01.0", "pf": "t_ens801f0", "vf": "0"}, 12},
@@ -121,7 +121,8 @@ var _ = DescribeTable("test vf stats collection", // Collect
 			"0000:4g:00.0/class":                         {Data: []byte("0x020000")},
 			"0000:4g:00.0/virtfn0":                       {Data: []byte("/sys/devices/0000:4g:01.0"), Mode: fs.ModeSymlink}},
 		netlink.Device{LinkAttrs: netlink.LinkAttrs{Vfs: []netlink.VfInfo{
-			{0, net.HardwareAddr{}, 0, 0, 0, true, 0, 0, 0, 31, 32, 33, 34, 35, 36, 37, 38, 0, 0}}}}, //nolint:govet
+			{ID: 0, Mac: nil, Vlan: 0, Qos: 0, TxRate: 0, Spoofchk: true, LinkState: 0, MaxTxRate: 0, MinTxRate: 0, RxPackets: 31, TxPackets: 32, RxBytes: 33, TxBytes: 34, Multicast: 35, Broadcast: 36, RxDropped: 37, TxDropped: 38, RssQuery: 0, Trust: 0},
+		}}},
 		[]metric{
 			{map[string]string{"numa_node": "0", "pciAddr": "0000:3f:01.0", "pf": "t_ens785f0", "vf": "0"}, 4},
 			{map[string]string{"numa_node": "0", "pciAddr": "0000:3f:01.0", "pf": "t_ens785f0", "vf": "0"}, 8},
@@ -256,12 +257,13 @@ var _ = DescribeTable("test getting sriov dev details", // getSriovDev
 		"0000:4f:00.0",
 		[]string{"sysfs", "netlink"},
 		fstest.MapFS{
-			"0000:4f:00.0/net/ens785f0": {Mode: fs.ModeDir},
-			"0000:4f:00.0/virtfn0":      {Data: []byte("/sys/devices/0000:4f:01.0"), Mode: fs.ModeSymlink},
-			"0000:4f:00.0/virtfn1":      {Data: []byte("/sys/devices/0000:4f:01.1"), Mode: fs.ModeSymlink},
-			"ens785f0/device/sriov":     {Mode: fs.ModeDir}, // Added to enable sysfs reader
-			"0000:5g:00.0/net/ens801f0": {Mode: fs.ModeDir},
-			"0000:5g:00.0/virtfn0":      {Data: []byte("/sys/devices/0000:5g:01.0"), Mode: fs.ModeSymlink}},
+			"0000:4f:00.0/net/ens785f0":                {Mode: fs.ModeDir},
+			"0000:4f:00.0/virtfn0":                     {Data: []byte("/sys/devices/0000:4f:01.0"), Mode: fs.ModeSymlink},
+			"0000:4f:00.0/virtfn1":                     {Data: []byte("/sys/devices/0000:4f:01.1"), Mode: fs.ModeSymlink},
+			"ens785f0/device/sriov":                    {Mode: fs.ModeDir},
+			"ens785f0/device/sriov/0/stats/rx_packets": {Data: []byte("1")}, // Added to enable sysfsReader
+			"0000:5g:00.0/net/ens801f0":                {Mode: fs.ModeDir},
+			"0000:5g:00.0/virtfn0":                     {Data: []byte("/sys/devices/0000:5g:01.0"), Mode: fs.ModeSymlink}},
 		nil,
 		sriovDev{
 			"ens785f0",

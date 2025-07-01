@@ -9,7 +9,7 @@ import (
 
 // PerPF returns stats related to each virtual function for a given physical function
 type PerPF struct {
-	pf  string
+	Pf  string
 	Vfs map[int]netlink.VfInfo
 }
 
