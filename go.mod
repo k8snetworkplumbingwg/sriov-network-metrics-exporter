@@ -10,7 +10,7 @@ require (
 	github.com/vishvananda/netlink v1.3.1
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8
 	google.golang.org/grpc v1.56.3
-	k8s.io/kubelet v0.25.5
+	k8s.io/kubelet v0.25.16
 )
 
 require (
