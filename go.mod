@@ -8,7 +8,7 @@ require (
 	github.com/prometheus/client_golang v1.23.0
 	github.com/prometheus/client_model v0.6.2
 	github.com/vishvananda/netlink v1.3.1
-	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8
+	golang.org/x/time v0.12.0
 	google.golang.org/grpc v1.56.3
 	k8s.io/kubelet v0.25.5
 )
