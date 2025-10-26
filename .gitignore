@@ -1,5 +1,5 @@
 # Temporary Build Files
-build/
+/build/*
 bin/
 testbin/
 env
