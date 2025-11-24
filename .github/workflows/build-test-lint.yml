@@ -20,7 +20,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build
         env:
@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Add support for more platforms with QEMU (optional)
       # https://github.com/docker/setup-qemu-action
@@ -62,7 +62,7 @@ jobs:
           go-version: 1.22.x
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install hwdata
         run: sudo apt-get install hwdata -y
@@ -80,7 +80,7 @@ jobs:
         with:
           go-version: 1.22.x
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install hwdata
         run: sudo apt-get install hwdata -y
@@ -96,7 +96,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: 1.22.x
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Hadolint
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - uses: brpaz/hadolint-action@v1.5.0
       name: Run Hadolint
       with:
@@ -117,7 +117,7 @@ jobs:
   go-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Go
       uses: actions/setup-go@v5
