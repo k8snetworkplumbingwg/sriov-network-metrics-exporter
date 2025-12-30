@@ -51,13 +51,16 @@ test-coverage:
 	go test ./... -coverprofile cover.out
 	go tool cover -func cover.out
 
-go-lint-install:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
+GOLANGCI_LINT_VER = v2.7.2
+GOLANGCI_LINT = $(GOPATH)/bin/golangci-lint
 
-go-lint: go-lint-install
-	go mod tidy
-	go fmt ./...
-	golangci-lint run --color always -v ./... 
+$(GOLANGCI_LINT): ; $(info  installing golangci-lint...)
+	$Q go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
 
-go-lint-report: go-lint-install
-	golangci-lint run --color always -v ./... &> golangci-lint.txt
+lint: | $(GOLANGCI_LINT) ; $(info  running golangci-lint...) @ ## Run golangci-lint
+	$Q $(GOLANGCI_LINT) run --timeout=5m
+
+go-lint: lint
+
+go-lint-report: | $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) run --color always -v ./... &> golangci-lint.txt

@@ -1,4 +1,4 @@
-FROM docker.io/golang:alpine as builder
+FROM docker.io/golang:1.25-alpine as builder
 
 RUN apk add --no-cache --virtual build-dependencies build-base linux-headers git
 COPY ./ /usr/src/sriov-network-metrics-exporter

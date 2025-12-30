@@ -53,10 +53,22 @@ var _ = DescribeTable("test pod cpu link collection", // Collect
 			{map[string]string{"cpu": "cpu2", "numa_node": "0"}, 1},
 			{map[string]string{"cpu": "cpu1", "numa_node": "1"}, 1},
 			{map[string]string{"cpu": "cpu3", "numa_node": "1"}, 1},
-			{map[string]string{"cpu_id": "0", "numa_node": "0", "uid": "6b5b533a_6307_48d1_911f_07bf5d4e1c82", "container_id": "0123456789abcdefaaaa"}, 1},
-			{map[string]string{"cpu_id": "2", "numa_node": "0", "uid": "6b5b533a_6307_48d1_911f_07bf5d4e1c82", "container_id": "0123456789abcdefaaaa"}, 1},
-			{map[string]string{"cpu_id": "1", "numa_node": "1", "uid": "6b5b533a_6307_48d1_911f_07bf5d4e1c82", "container_id": "0123456789abcdefaaaa"}, 1},
-			{map[string]string{"cpu_id": "3", "numa_node": "1", "uid": "6b5b533a_6307_48d1_911f_07bf5d4e1c82", "container_id": "0123456789abcdefaaaa"}, 1}}),
+			{map[string]string{
+				"cpu_id": "0", "numa_node": "0",
+				"uid": "6b5b533a_6307_48d1_911f_07bf5d4e1c82", "container_id": "0123456789abcdefaaaa",
+			}, 1},
+			{map[string]string{
+				"cpu_id": "2", "numa_node": "0",
+				"uid": "6b5b533a_6307_48d1_911f_07bf5d4e1c82", "container_id": "0123456789abcdefaaaa",
+			}, 1},
+			{map[string]string{
+				"cpu_id": "1", "numa_node": "1",
+				"uid": "6b5b533a_6307_48d1_911f_07bf5d4e1c82", "container_id": "0123456789abcdefaaaa",
+			}, 1},
+			{map[string]string{
+				"cpu_id": "3", "numa_node": "1",
+				"uid": "6b5b533a_6307_48d1_911f_07bf5d4e1c82", "container_id": "0123456789abcdefaaaa",
+			}, 1}}),
 	Entry("test unavailable kube cgroup directory",
 		fstest.MapFS{
 			"node0/cpu0":        {Mode: fs.ModeDir},
@@ -71,7 +83,8 @@ var _ = DescribeTable("test pod cpu link collection", // Collect
 			{map[string]string{"cpu": "cpu2", "numa_node": "0"}, 1},
 			{map[string]string{"cpu": "cpu1", "numa_node": "1"}, 1},
 			{map[string]string{"cpu": "cpu3", "numa_node": "1"}, 1}},
-		"pod cpu links not available: could not read cpu files directory: readdir kubepods-pod6b5b533a_6307_48d1_911f_07bf5d4e1c83.slice: not implemented"),
+		"pod cpu links not available: could not read cpu files directory: "+
+			"readdir kubepods-pod6b5b533a_6307_48d1_911f_07bf5d4e1c83.slice: not implemented"),
 )
 
 var _ = DescribeTable("test reading default cpu set", // readDefaultSet
@@ -192,7 +205,8 @@ var _ = DescribeTable("test getting guaranteed pod cpus", // guaranteedPodCPUs
 			"cpu_manager_state": {Data: []byte("{\"policyName\":\"none\",\"defaultCpuSet\":\"4-7\",\"checksum\":1353318690}")},
 			"kubepods-pod6b5b533a_6307_48d1_911f_07bf5d4e1c82.slice/0123456789abcdefaaaa/cpuset.cpus": {Mode: fs.ModeDir}},
 		[]podCPULink{},
-		fmt.Errorf("could not open cgroup cpuset files, error: read kubepods-pod6b5b533a_6307_48d1_911f_07bf5d4e1c82.slice/0123456789abcdefaaaa/cpuset.cpus: invalid argument")),
+		fmt.Errorf("could not open cgroup cpuset files, error: "+
+			"read kubepods-pod6b5b533a_6307_48d1_911f_07bf5d4e1c82.slice/0123456789abcdefaaaa/cpuset.cpus: invalid argument")),
 	Entry("container cpuset range covered by defaults",
 		fstest.MapFS{
 			"cpuset.cpus":       {Data: []byte("0-3")},

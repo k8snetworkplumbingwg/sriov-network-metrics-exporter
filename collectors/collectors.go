@@ -1,5 +1,7 @@
-// Package Collectors defines the structure of the collector aggregator and contains the individual collectors used to gather metrics
-// Each collector should be created in its own file with any required command line flags, its collection behavior and its registration method defined.
+// Package collectors defines the structure of the collector aggregator and contains the individual collectors
+// used to gather metrics.
+// Each collector should be created in its own file with any required command line flags, its collection
+// behavior and its registration method defined.
 
 package collectors
 
@@ -22,7 +24,8 @@ var (
 // SriovCollector registers the collectors used for specific data and exposes a Collect method to gather the data
 type SriovCollector []prometheus.Collector
 
-// Register defines a flag for a collector and adds it to the registry of enabled collectors if the flag is set to true - either through the default option or the flag passed on start
+// Register defines a flag for a collector and adds it to the registry of enabled collectors
+// if the flag is set to true - either through the default option or the flag passed on start.
 // Run by each individual collector in its init function.
 func register(name string, enabled bool, collector func() prometheus.Collector) {
 	collectorState[name] = &enabled

@@ -7,18 +7,24 @@ import (
 	"flag"
 	"log"
 	"net/http"
-
-	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/collectors"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/time/rate"
+
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/collectors"
+)
+
+const (
+	defaultRateBurst         = 10
+	defaultReadHeaderTimeout = 10 * time.Second
 )
 
 var (
 	addr            = flag.String("web.listen-address", ":9808", "Port to listen on for web interface and telemetry.")
 	rateLimit       = flag.Int("web.rate-limit", 1, "Limit for requests per second.")
-	rateBurst       = flag.Int("web.rate-burst", 10, "Maximum per second burst rate for requests.")
+	rateBurst       = flag.Int("web.rate-burst", defaultRateBurst, "Maximum per second burst rate for requests.")
 	metricsEndpoint = "/metrics"
 )
 
@@ -38,8 +44,13 @@ func main() {
 				noBody(promhttp.Handler()), metricsEndpoint)),
 		rate.Limit(*rateLimit), *rateBurst)
 
+	server := &http.Server{
+		Addr:              *addr,
+		Handler:           handlerWithMiddleware,
+		ReadHeaderTimeout: defaultReadHeaderTimeout,
+	}
 	log.Printf("listening on %v", *addr)
-	log.Fatalf("ListenAndServe error: %v", http.ListenAndServe(*addr, handlerWithMiddleware))
+	log.Fatalf("ListenAndServe error: %v", server.ListenAndServe())
 }
 
 func parseAndVerifyFlags() {

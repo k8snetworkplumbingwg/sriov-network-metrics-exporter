@@ -1,0 +1,100 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter
+
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - dogsled
+    - dupl
+    - errcheck
+    - copyloopvar
+    - exhaustive
+    - funlen
+    - goconst
+    - gocritic
+    - gocyclo
+    - mnd
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - prealloc
+    - rowserrcheck
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+  settings:
+    dupl:
+      threshold: 100
+    funlen:
+      lines: 100
+      statements: 50
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - dupImport
+        - ifElseChain
+        - octalLiteral
+        - whyNoLint
+        - wrapperFunc
+        - unnamedResult
+      settings:
+        hugeParam:
+          sizeThreshold: 512
+        rangeValCopy:
+          sizeThreshold: 512
+    gocyclo:
+      min-complexity: 15
+    lll:
+      line-length: 140
+    misspell:
+      locale: US
+    mnd:
+      checks:
+        - argument
+        - case
+        - condition
+        - return
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: false
+  exclusions:
+    rules:
+      - path: ".*_test\\.go"
+        linters:
+          - dupl
+          - funlen
+          - goconst
+          - mnd
+          - errcheck
+          - lll
+          - gocritic
+          - staticcheck
+          - unconvert
+

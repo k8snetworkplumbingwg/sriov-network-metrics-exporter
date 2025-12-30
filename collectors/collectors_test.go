@@ -6,6 +6,7 @@ import (
 	"log"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -81,21 +82,34 @@ var _ = DescribeTable("test registering collector", // register
 
 func assertLogs(logs []string) {
 	for _, log := range logs {
-		Eventually(&buffer).WithTimeout(time.Duration(2 * time.Second)).Should(gbytes.Say(log))
+		Eventually(&buffer).WithTimeout(2 * time.Second).Should(gbytes.Say(log))
 	}
 }
 
 // Replaces filepath.EvalSymlinks with an emulated evaluation to work with the in-memory fs.
 var evalSymlinks = func(path string) (string, error) {
 	path = filepath.Join(filepath.Base(filepath.Dir(path)), filepath.Base(path))
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
 
-	if stat, err := fs.Stat(devfs, path); err == nil && stat.Mode() == fs.ModeSymlink {
-		if target, err := fs.ReadFile(devfs, path); err == nil {
-			return string(target), nil
-		} else {
-			return "", fmt.Errorf("error")
-		}
-	} else {
-		return "", fmt.Errorf("error")
+	entries, err := fs.ReadDir(devfs, dir)
+	if err != nil {
+		return "", fmt.Errorf("error reading dir: %v", err)
 	}
+
+	for _, entry := range entries {
+		if entry.Name() == base && entry.Type()&fs.ModeSymlink != 0 {
+			// In Go 1.25, fstest.MapFS treats fs.ModeSymlink files as actual symlinks
+			// and tries to follow them, so fs.ReadFile won't work.
+			// Access the MapFS directly to get the symlink target data.
+			if mapFS, ok := devfs.(fstest.MapFS); ok {
+				if mapFile, exists := mapFS[path]; exists {
+					return string(mapFile.Data), nil
+				}
+			}
+			return "", fmt.Errorf("error reading symlink target")
+		}
+	}
+
+	return "", fmt.Errorf("not a symlink or not found")
 }

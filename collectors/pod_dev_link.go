@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/url"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -21,11 +20,16 @@ import (
 	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/utils"
 )
 
-var (
+const (
 	defaultPodResourcesMaxSize = 1024 * 1024 * 16 // 16 Mb
-	podDevLinkName             = "kubepoddevice"
-	podResourcesPath           = flag.String("path.kubeletsocket", "/var/lib/kubelet/pod-resources/kubelet.sock", "Path to kubelet resources socket")
-	pciAddressPattern          = regexp.MustCompile(`^[[:xdigit:]]{4}:[[:xdigit:]]{2}:[[:xdigit:]]{2}\.\d$`)
+	kubeletConnTimeout         = 10 * time.Second
+)
+
+var (
+	podDevLinkName   = "kubepoddevice"
+	podResourcesPath = flag.String("path.kubeletsocket",
+		"/var/lib/kubelet/pod-resources/kubelet.sock", "Path to kubelet resources socket")
+	pciAddressPattern = regexp.MustCompile(`^[[:xdigit:]]{4}:[[:xdigit:]]{2}:[[:xdigit:]]{2}\.\d$`)
 )
 
 // podDevLinkCollector the basic type used to collect information on kubernetes device links
@@ -78,7 +82,7 @@ func (c podDevLinkCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-// Describe has no defined behaviour for this collector
+// Describe has no defined behavior for this collector
 func (c podDevLinkCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
@@ -88,20 +92,26 @@ func createPodDevLinkCollector() prometheus.Collector {
 	}
 }
 
-// PodResources uses the kubernetes kubelet api to get information about the devices and the pods they are attached to.
-// We create and close a new connection here on each run. The performance impact of this seems marginal - but sharing a connection might save cpu time
+// PodResources uses the kubernetes kubelet api to get information about the devices
+// and the pods they are attached to.
+// We create and close a new connection here on each run. The performance impact of this
+// seems marginal - but sharing a connection might save cpu time
 func PodResources() []*v1.PodResources {
 	var podResource []*v1.PodResources
 
-	kubeletSocket := strings.Join([]string{"unix:///", *podResourcesPath}, "")
-	client, conn, err := GetV1Client(kubeletSocket, 10*time.Second, defaultPodResourcesMaxSize)
+	kubeletSocket := "unix:///" + *podResourcesPath
+	client, conn, err := GetV1Client(kubeletSocket, kubeletConnTimeout, defaultPodResourcesMaxSize)
 	if err != nil {
 		log.Print(err)
 		return podResource
 	}
 
-	defer conn.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Printf("failed to close connection: %v", err)
+		}
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), kubeletConnTimeout)
 	defer cancel()
 	resp, err := client.List(ctx, &v1.ListPodResourcesRequest{})
 	if err != nil {
@@ -131,7 +141,7 @@ func resolveKubePodDeviceFilepaths() error {
 // Extracted from package k8s.io/kubernetes/pkg/kubelet/apis/podresources client.go v1.24.3
 // This is what is recommended for consumers of this package
 func GetV1Client(socket string, connectionTimeout time.Duration, maxMsgSize int) (v1.PodResourcesListerClient, *grpc.ClientConn, error) {
-	url, err := url.Parse(socket)
+	parsedURL, err := url.Parse(socket)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -139,7 +149,7 @@ func GetV1Client(socket string, connectionTimeout time.Duration, maxMsgSize int)
 	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, url.Path,
+	conn, err := grpc.DialContext(ctx, parsedURL.Path,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(dialer),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)))
