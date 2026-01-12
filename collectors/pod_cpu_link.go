@@ -1,6 +1,7 @@
 package collectors
 
-// kubepodCPUCollector is a Kubernetes focused collector that exposes information about CPUs linked to specific Kubernetes pods through the CPU Manager component in Kubelet
+// kubepodCPUCollector is a Kubernetes focused collector that exposes information about CPUs
+// linked to specific Kubernetes pods through the CPU Manager component in Kubelet
 
 import (
 	"encoding/json"
@@ -21,9 +22,11 @@ import (
 
 var (
 	kubepodcpu        = "kubepodcpu"
-	kubePodCgroupPath = flag.String("path.kubecgroup", "/sys/fs/cgroup/cpuset/kubepods.slice/", "Path for location of kubernetes cgroups on the host system")
+	kubePodCgroupPath = flag.String("path.kubecgroup",
+		"/sys/fs/cgroup/cpuset/kubepods.slice/", "Path for kubernetes cgroups")
 	sysDevSysNodePath = flag.String("path.nodecpuinfo", "/sys/devices/system/node/", "Path for location of system cpu information")
-	cpuCheckPointFile = flag.String("path.cpucheckpoint", "/var/lib/kubelet/cpu_manager_state", "Path for location of cpu manager checkpoint file")
+	cpuCheckPointFile = flag.String("path.cpucheckpoint",
+		"/var/lib/kubelet/cpu_manager_state", "Path for cpu manager checkpoint file")
 
 	kubecgroupfs    fs.FS
 	cpuinfofs       fs.FS
@@ -108,7 +111,7 @@ func (c kubepodCPUCollector) Describe(ch chan<- *prometheus.Desc) {
 func createKubepodCPUCollector() prometheus.Collector {
 	cpuInfo, err := getCPUInfo()
 	if err != nil {
-		//Exporter will fail here if file can not be read.
+		// Exporter will fail here if file can not be read.
 		logFatal("Fatal Error: cpu info for node can not be collected, %v", err.Error())
 	}
 
@@ -154,7 +157,8 @@ func getCPUInfo() (map[string]string, error) {
 // This accounting will create an entry for each guaranteed pod, even if that pod isn't managed by CPU manager
 // i.e. it will still create an entry if the pod is looking for millis of CPU
 // Todo: validate regex matching and evaluate performance of this approach
-// Todo: validate assumptions about directory structure against other runtimes and kubelet config. Plausibly problematic with CgroupsPerQos and other possible future cgroup changes
+// Todo: validate assumptions about directory structure against other runtimes and kubelet config.
+// Plausibly problematic with CgroupsPerQos and other possible future cgroup changes
 func getGuaranteedPodCPUs() ([]podCPULink, error) {
 	links := make([]podCPULink, 0)
 
@@ -259,7 +263,7 @@ func parseCPURange(cpuString string) ([]string, error) {
 		endpoints := strings.Split(r, "-")
 		if len(endpoints) == 1 {
 			cpuList = append(cpuList, endpoints[0])
-		} else if len(endpoints) == 2 {
+		} else if len(endpoints) == 2 { //nolint:mnd
 			start, err := strconv.Atoi(endpoints[0])
 			if err != nil {
 				return cpuList, err

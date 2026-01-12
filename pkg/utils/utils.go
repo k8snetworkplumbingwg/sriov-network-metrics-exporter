@@ -55,15 +55,27 @@ func ResolvePath(path *string) error {
 }
 
 // Required to enable testing (filepath.EvalSymlinks does not support the fs.FS interface that fstest implements)
-var EvalSymlinks = func(path string) (string, error) {
-	return filepath.EvalSymlinks(path)
-}
+var EvalSymlinks = filepath.EvalSymlinks
 
+// IsSymLink checks if the given path is a symbolic link.
+// Starting from Go 1.25, fstest.MapFS changed how it handles files with fs.ModeSymlink:
+// - fs.Stat now follows symlinks and returns info about the target (or error if target doesn't exist)
+// - fs.Stat's Mode() no longer returns fs.ModeSymlink for symlink entries
+// Using fs.ReadDir instead correctly returns the entry's type without following the symlink,
+// allowing proper symlink detection.
 func IsSymLink(fsys fs.FS, path string) bool {
-	if info, err := fs.Stat(fsys, path); err != nil {
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+
+	entries, err := fs.ReadDir(fsys, dir)
+	if err != nil {
 		return false
-	} else if info.Mode() == fs.ModeSymlink {
-		return true
+	}
+
+	for _, entry := range entries {
+		if entry.Name() == base {
+			return entry.Type()&fs.ModeSymlink != 0
+		}
 	}
 
 	return false

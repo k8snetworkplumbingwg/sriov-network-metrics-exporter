@@ -49,8 +49,9 @@ func getStatsReader(pf string, priority []string) (sriovStatReader, error) {
 	for _, collector := range priority {
 		switch collector {
 		case "sysfs":
-			if _, err := fs.Stat(netfs, filepath.Join(pf, "/device/sriov")); !os.IsNotExist(err) {
-				reader := sysfsReader{filepath.Join(*sysClassNet, "%s/device/sriov/%s/stats/")}
+			sriovPath := pf + "/device/sriov"
+			if _, err := fs.Stat(netfs, sriovPath); !os.IsNotExist(err) {
+				reader := sysfsReader{*sysClassNet + "/%s/device/sriov/%s/stats"}
 				// Test if sysfsReader can read stats for VF 0
 				if readerHasStats(reader, pf, vfTestID) {
 					log.Printf("%s - using sysfs collector", pf)
@@ -59,7 +60,7 @@ func getStatsReader(pf string, priority []string) (sriovStatReader, error) {
 					log.Printf("%s - sysfs collector present but no stats found for vf%s", pf, vfTestID)
 				}
 			} else {
-				log.Printf("%s does not support sysfs collector, directory '%s' does not exist", pf, filepath.Join(pf, "/device/sriov"))
+				log.Printf("%s does not support sysfs collector, directory '%s' does not exist", pf, sriovPath)
 			}
 		case "netlink":
 			if vfstats.DoesPfSupportNetlink(pf) {
@@ -82,29 +83,28 @@ func getStatsReader(pf string, priority []string) (sriovStatReader, error) {
 }
 
 // ReadStats takes in the name of a PF and the VF Id and returns a stats object.
-func (r netlinkReader) ReadStats(pfName string, vfID string) sriovStats {
+func (r netlinkReader) ReadStats(pfName, vfID string) sriovStats {
 	id, err := strconv.Atoi(vfID)
 	if err != nil {
 		log.Print("error reading passed virtual function id")
 		return sriovStats{}
 	}
 
-	return func() sriovStats {
-		vf := r.data.Vfs[id]
-		return map[string]int64{
-			"tx_bytes":     int64(vf.TxBytes),
-			"rx_bytes":     int64(vf.RxBytes),
-			"tx_packets":   int64(vf.TxPackets),
-			"rx_packets":   int64(vf.RxPackets),
-			"tx_dropped":   int64(vf.TxDropped),
-			"rx_dropped":   int64(vf.RxDropped),
-			"rx_broadcast": int64(vf.Broadcast),
-			"rx_multicast": int64(vf.Multicast),
-		}
-	}()
+	vf := r.data.Vfs[id]
+	//nolint:gosec // G115: Values are network stats unlikely to overflow int64
+	return map[string]int64{
+		"tx_bytes":     int64(vf.TxBytes),
+		"rx_bytes":     int64(vf.RxBytes),
+		"tx_packets":   int64(vf.TxPackets),
+		"rx_packets":   int64(vf.RxPackets),
+		"tx_dropped":   int64(vf.TxDropped),
+		"rx_dropped":   int64(vf.RxDropped),
+		"rx_broadcast": int64(vf.Broadcast),
+		"rx_multicast": int64(vf.Multicast),
+	}
 }
 
-func (r sysfsReader) ReadStats(pfName string, vfID string) sriovStats {
+func (r sysfsReader) ReadStats(pfName, vfID string) sriovStats {
 	stats := make(sriovStats, 0)
 
 	statDir := fmt.Sprintf(sriovVFStatsDir, pfName, vfID)

@@ -4,11 +4,11 @@ import (
 	"io/fs"
 	"testing/fstest"
 
-	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/vfstats"
-	"github.com/vishvananda/netlink"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/vishvananda/netlink"
+
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/vfstats"
 )
 
 var _ = DescribeTable("test getting stats reader for pf", // getStatsReader

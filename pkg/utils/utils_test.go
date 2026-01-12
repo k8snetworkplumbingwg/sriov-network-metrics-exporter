@@ -28,7 +28,7 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterEach(func() {
-	os.Remove(linkPath)
+	_ = os.Remove(linkPath)
 })
 
 var _ = DescribeTable("test path resolution", // ResolvePath

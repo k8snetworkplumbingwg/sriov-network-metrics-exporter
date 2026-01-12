@@ -228,8 +228,8 @@ func getPFName(device string) string {
 }
 
 // isNetDevice checks if the device is a net device by checking its device class
-func isNetDevice(filepath string) bool {
-	file, err := fs.ReadFile(devfs, filepath)
+func isNetDevice(filePath string) bool {
+	file, err := fs.ReadFile(devfs, filePath)
 	if err != nil {
 		return false
 	}

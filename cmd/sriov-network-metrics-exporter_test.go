@@ -21,7 +21,7 @@ func TestMain(t *testing.T) {
 var _ = DescribeTable("test endpointOnly handler", // endpointOnly
 	func(endpoint string, expectedResponse int) {
 		recorder := httptest.NewRecorder()
-		request := httptest.NewRequest(http.MethodGet, endpoint, nil)
+		request := httptest.NewRequest(http.MethodGet, endpoint, http.NoBody)
 		handler := endpointOnly(promhttp.Handler(), metricsEndpoint)
 
 		handler.ServeHTTP(recorder, request)
@@ -35,7 +35,7 @@ var _ = DescribeTable("test endpointOnly handler", // endpointOnly
 var _ = DescribeTable("test getOnly handler", // getOnly
 	func(method string, expectedResponse int) {
 		recorder := httptest.NewRecorder()
-		request := httptest.NewRequest(method, metricsEndpoint, nil)
+		request := httptest.NewRequest(method, metricsEndpoint, http.NoBody)
 		handler := getOnly(promhttp.Handler())
 
 		handler.ServeHTTP(recorder, request)
@@ -67,7 +67,7 @@ var _ = DescribeTable("test limitRequests handler", // limitRequests
 		code := http.StatusOK
 		for i := 0; i < requests; i++ {
 			recorder := httptest.NewRecorder()
-			request := httptest.NewRequest(http.MethodGet, metricsEndpoint, nil)
+			request := httptest.NewRequest(http.MethodGet, metricsEndpoint, http.NoBody)
 			handler.ServeHTTP(recorder, request)
 
 			code = recorder.Code
