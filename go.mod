@@ -3,7 +3,7 @@ module github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter
 go 1.25.3
 
 require (
-	github.com/onsi/ginkgo/v2 v2.27.2
+	github.com/onsi/ginkgo/v2 v2.27.5
 	github.com/onsi/gomega v1.38.2
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
