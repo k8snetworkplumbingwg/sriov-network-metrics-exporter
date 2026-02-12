@@ -7,8 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
-	"net/url"
 	"regexp"
 	"time"
 
@@ -141,24 +139,11 @@ func resolveKubePodDeviceFilepaths() error {
 // Extracted from package k8s.io/kubernetes/pkg/kubelet/apis/podresources client.go v1.24.3
 // This is what is recommended for consumers of this package
 func GetV1Client(socket string, connectionTimeout time.Duration, maxMsgSize int) (v1.PodResourcesListerClient, *grpc.ClientConn, error) {
-	parsedURL, err := url.Parse(socket)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, parsedURL.Path,
+	conn, err := grpc.NewClient(socket,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithContextDialer(dialer),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)))
 	if err != nil {
 		return nil, nil, fmt.Errorf("error dialing socket %s: %v", socket, err)
 	}
 	return v1.NewPodResourcesListerClient(conn), conn, nil
-}
-
-func dialer(ctx context.Context, addr string) (net.Conn, error) {
-	return (&net.Dialer{}).DialContext(ctx, "unix", addr)
 }
