@@ -12,6 +12,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	v1 "k8s.io/kubelet/pkg/apis/podresources/v1"
 
@@ -145,5 +146,25 @@ func GetV1Client(socket string, connectionTimeout time.Duration, maxMsgSize int)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error dialing socket %s: %v", socket, err)
 	}
+
+	// Trigger eager connection and wait for it to be ready within the timeout.
+	// grpc.NewClient is non-blocking by default; this restores the timeout behavior.
+	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
+	defer cancel()
+
+	conn.Connect()
+	for {
+		s := conn.GetState()
+		if s == connectivity.Ready {
+			break
+		}
+		if !conn.WaitForStateChange(ctx, s) {
+			if err := conn.Close(); err != nil {
+				log.Printf("failed to close connection: %v", err)
+			}
+			return nil, nil, fmt.Errorf("error connecting to socket %s: timed out waiting for connection", socket)
+		}
+	}
+
 	return v1.NewPodResourcesListerClient(conn), conn, nil
 }

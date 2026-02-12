@@ -1,11 +1,16 @@
 package collectors
 
 import (
+	"context"
+	"net"
+	"os"
+	"path/filepath"
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"google.golang.org/grpc"
 )
-
-// TODO: create Collector and dialer unit tests
 
 var _ = Describe("test creating podDevLink collector", func() { // createPodDevLinkCollector
 	It("returns the correct collector", func() {
@@ -36,4 +41,69 @@ var _ = DescribeTable("test pci address regexp: "+pciAddressPattern.String(), //
 	Entry("invalid, 0000:00:00.00", "0000:00:00.00", false),
 )
 
-// TODO: create integration tests for GetV1Client and PodResources, they require the kubelet API
+var _ = Describe("GetV1Client", func() {
+	var (
+		tmpDir     string
+		socketPath string
+	)
+
+	BeforeEach(func() {
+		var err error
+		tmpDir, err = os.MkdirTemp("", "grpc-test")
+		Expect(err).NotTo(HaveOccurred())
+		socketPath = filepath.Join(tmpDir, "test.sock")
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(tmpDir)).To(Succeed())
+	})
+
+	It("connects successfully to a valid unix socket", func() {
+		lis, err := net.Listen("unix", socketPath)
+		Expect(err).NotTo(HaveOccurred())
+
+		server := grpc.NewServer()
+		go func() { _ = server.Serve(lis) }()
+		defer server.Stop()
+
+		client, conn, err := GetV1Client("unix:///"+socketPath, 5*time.Second, defaultPodResourcesMaxSize)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(client).NotTo(BeNil())
+		Expect(conn).NotTo(BeNil())
+
+		err = conn.Close()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("returns an error when connection times out on non-existent socket", func() {
+		nonExistentSocket := filepath.Join(tmpDir, "nonexistent.sock")
+
+		_, _, err := GetV1Client("unix:///"+nonExistentSocket, 500*time.Millisecond, defaultPodResourcesMaxSize)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("timed out waiting for connection"))
+	})
+
+	It("returns a functional client that can issue RPCs", func() {
+		lis, err := net.Listen("unix", socketPath)
+		Expect(err).NotTo(HaveOccurred())
+
+		server := grpc.NewServer()
+		go func() { _ = server.Serve(lis) }()
+		defer server.Stop()
+
+		client, conn, err := GetV1Client("unix:///"+socketPath, 5*time.Second, defaultPodResourcesMaxSize)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(client).NotTo(BeNil())
+		defer func() { _ = conn.Close() }()
+
+		// The server does not implement PodResourcesLister, so a List call
+		// should return an "Unimplemented" gRPC error, confirming the client
+		// is connected and able to communicate with the server.
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		_, listErr := client.List(ctx, nil)
+		Expect(listErr).To(HaveOccurred())
+		Expect(listErr.Error()).To(ContainSubstring("Unimplemented"))
+	})
+})
