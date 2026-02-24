@@ -7,6 +7,6 @@ RUN make clean && make build
 
 FROM docker.io/alpine:3.22
 COPY --from=builder /usr/src/sriov-network-metrics-exporter/build/* /usr/bin/
-RUN apk update && apk add --no-cache ca-certificates && update-ca-certificates && apk add --no-cache openssl
+RUN apk update && apk add --no-cache ca-certificates && update-ca-certificates && apk add --no-cache openssl curl
 EXPOSE 9808
 ENTRYPOINT ["sriov-exporter"]
