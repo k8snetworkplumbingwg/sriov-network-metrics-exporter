@@ -5,15 +5,21 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/go-logr/stdr"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/time/rate"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 
 	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/collectors"
+	"github.com/k8snetworkplumbingwg/sriov-network-metrics-exporter/pkg/tlsconfig"
 )
 
 const (
@@ -26,6 +32,18 @@ var (
 	rateLimit       = flag.Int("web.rate-limit", 1, "Limit for requests per second.")
 	rateBurst       = flag.Int("web.rate-burst", defaultRateBurst, "Maximum per second burst rate for requests.")
 	metricsEndpoint = "/metrics"
+
+	tlsCertFile = flag.String("tls-cert-file", "",
+		"File containing the x509 certificate for HTTPS. If empty, server runs in plain HTTP mode.")
+	tlsKeyFile      = flag.String("tls-private-key-file", "", "File containing the x509 private key matching --tls-cert-file.")
+	tlsCipherSuites = flag.String("tls-cipher-suites", "", "Comma-separated list of TLS cipher suites (IANA names). If empty, uses defaults.")
+	tlsCurves       = flag.String("tls-curve-preferences", "", "Comma-separated list of TLS curve preferences. If empty, uses defaults.")
+	tlsMinVer       = flag.String("tls-min-version", "",
+		"Minimum TLS version (VersionTLS12, VersionTLS13). If empty, defaults to VersionTLS12.")
+	enableHTTP2 = flag.Bool("enable-http2", false,
+		"Enable HTTP/2 for the metrics server. Disabled by default (CVE-2023-39325 mitigation).")
+	enableAuthNAuthZ = flag.Bool("authentication-and-authorization", false,
+		"Enable Kubernetes TokenReview/SubjectAccessReview for the metrics endpoint.")
 )
 
 func main() {
@@ -38,19 +56,68 @@ func main() {
 	}
 
 	// Use the default promhttp handler wrapped with middleware to serve at the metrics endpoint
-	handlerWithMiddleware := limitRequests(
+	var handler = limitRequests(
 		getOnly(
 			endpointOnly(
 				noBody(promhttp.Handler()), metricsEndpoint)),
 		rate.Limit(*rateLimit), *rateBurst)
 
+	if *enableAuthNAuthZ {
+		handler, err = newAuthHandler(handler)
+		if err != nil {
+			log.Fatalf("failed to create auth handler: %v", err)
+		}
+		log.Print("authentication and authorization enabled")
+	}
+
 	server := &http.Server{
 		Addr:              *addr,
-		Handler:           handlerWithMiddleware,
+		Handler:           handler,
 		ReadHeaderTimeout: defaultReadHeaderTimeout,
 	}
-	log.Printf("listening on %v", *addr)
-	log.Fatalf("ListenAndServe error: %v", server.ListenAndServe())
+
+	if *tlsCertFile != "" {
+		if *tlsKeyFile == "" {
+			log.Fatal("--tls-private-key-file is required when --tls-cert-file is set")
+		}
+
+		var opts []tlsconfig.Option
+		if *tlsCipherSuites != "" {
+			ciphers, err := tlsconfig.CipherNamesToIDs(strings.Split(*tlsCipherSuites, ","))
+			if err != nil {
+				log.Fatalf("invalid --tls-cipher-suites: %v", err)
+			}
+			opts = append(opts, tlsconfig.WithCipherSuites(ciphers))
+		}
+		if *tlsCurves != "" {
+			curves, err := tlsconfig.CurveNamesToIDs(strings.Split(*tlsCurves, ","))
+			if err != nil {
+				log.Fatalf("invalid --tls-curve-preferences: %v", err)
+			}
+			opts = append(opts, tlsconfig.WithCurvePreferences(curves))
+		}
+		if *tlsMinVer != "" {
+			v, err := tlsconfig.TLSVersionToGo(*tlsMinVer)
+			if err != nil {
+				log.Fatalf("invalid --tls-min-version: %v", err)
+			}
+			opts = append(opts, tlsconfig.WithMinVersion(v))
+		}
+		opts = append(opts, tlsconfig.WithHTTP2(*enableHTTP2))
+
+		tlsCfg, reloader, err := tlsconfig.NewTLSConfig(*tlsCertFile, *tlsKeyFile, opts...)
+		if err != nil {
+			log.Fatalf("failed to configure TLS: %v", err)
+		}
+		server.TLSConfig = tlsCfg
+		log.Printf("listening on %v (HTTPS)", *addr)
+		err = server.ListenAndServeTLS("", "")
+		_ = reloader.Close()
+		log.Fatalf("ListenAndServeTLS error: %v", err)
+	} else {
+		log.Printf("listening on %v (HTTP)", *addr)
+		log.Fatalf("ListenAndServe error: %v", server.ListenAndServe())
+	}
 }
 
 func parseAndVerifyFlags() {
@@ -119,4 +186,26 @@ func verifyFlags() {
 	if err := collectors.ResolveFilepaths(); err != nil {
 		log.Panicf("failed to resolve paths\n%v", err)
 	}
+}
+
+// newAuthHandler wraps an http.Handler with Kubernetes authentication (TokenReview)
+// and authorization (SubjectAccessReview) using controller-runtime's
+// WithAuthenticationAndAuthorization filter.
+func newAuthHandler(handler http.Handler) (http.Handler, error) {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, fmt.Errorf("getting in-cluster config: %w", err)
+	}
+
+	httpClient, err := rest.HTTPClientFor(config)
+	if err != nil {
+		return nil, fmt.Errorf("creating HTTP client: %w", err)
+	}
+
+	filter, err := filters.WithAuthenticationAndAuthorization(config, httpClient)
+	if err != nil {
+		return nil, fmt.Errorf("creating auth filter: %w", err)
+	}
+
+	return filter(stdr.New(log.Default()), handler)
 }
