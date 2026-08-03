@@ -23,7 +23,7 @@ const (
 
 var (
 	collectorPriority    utils.StringListFlag
-	defaultPriority            = utils.StringListFlag{"sysfs", "netlink"}
+	defaultPriority            = utils.StringListFlag{readerSysfs, readerNetlink}
 	sysBusPci                  = flag.String("path.sysbuspci", "/sys/bus/pci/devices", "Path to sys/bus/pci/devices/ on host")
 	sysClassNet                = flag.String("path.sysclassnet", "/sys/class/net", "Path to sys/class/net/ on host")
 	pfNameFile                 = "net"
@@ -81,7 +81,7 @@ func (c sriovDevCollector) Collect(ch chan<- prometheus.Metric) {
 				desc := prometheus.NewDesc(
 					prometheus.BuildFQName(collectorNamespace, vfStatsSubsystem, name),
 					fmt.Sprintf("Statistic %s.", name),
-					[]string{"pf", "vf", "pciAddr", "numa_node"}, nil,
+					[]string{labelPF, labelVF, labelPCIAddr, labelNumaNode}, nil,
 				)
 
 				ch <- prometheus.MustNewConstMetric(

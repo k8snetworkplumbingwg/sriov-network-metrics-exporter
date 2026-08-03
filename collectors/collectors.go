@@ -13,6 +13,24 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// Prometheus label name constants, shared across collectors.
+const (
+	labelNumaNode    = "numa_node"
+	labelPCIAddr     = "pciAddr"
+	labelCPU         = "cpu"
+	labelCPUID       = "cpu_id"
+	labelContainerID = "container_id"
+	labelPF          = "pf"
+	labelVF          = "vf"
+	labelUID         = "uid"
+)
+
+// Stats reader type constants.
+const (
+	readerSysfs   = "sysfs"
+	readerNetlink = "netlink"
+)
+
 var (
 	collectorNamespace = "sriov"
 	enabled            = true

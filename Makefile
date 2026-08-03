@@ -51,7 +51,7 @@ test-coverage:
 	go test ./... -coverprofile cover.out
 	go tool cover -func cover.out
 
-GOLANGCI_LINT_VER = v2.7.2
+GOLANGCI_LINT_VER = v2.12.2
 GOLANGCI_LINT = $(GOPATH)/bin/golangci-lint
 
 $(GOLANGCI_LINT): ; $(info  installing golangci-lint...)

@@ -48,32 +48,32 @@ func getStatsReader(pf string, priority []string) (sriovStatReader, error) {
 	vfTestID := "0"
 	for _, collector := range priority {
 		switch collector {
-		case "sysfs":
+		case readerSysfs:
 			sriovPath := pf + "/device/sriov"
 			if _, err := fs.Stat(netfs, sriovPath); !os.IsNotExist(err) {
 				reader := sysfsReader{*sysClassNet + "/%s/device/sriov/%s/stats"}
 				// Test if sysfsReader can read stats for VF 0
 				if readerHasStats(reader, pf, vfTestID) {
-					log.Printf("%s - using sysfs collector", pf)
+					log.Printf("%s - using %s collector", pf, readerSysfs)
 					return reader, nil
 				} else {
-					log.Printf("%s - sysfs collector present but no stats found for vf%s", pf, vfTestID)
+					log.Printf("%s - %s collector present but no stats found for vf%s", pf, readerSysfs, vfTestID)
 				}
 			} else {
-				log.Printf("%s does not support sysfs collector, directory '%s' does not exist", pf, sriovPath)
+				log.Printf("%s does not support %s collector, directory '%s' does not exist", pf, readerSysfs, sriovPath)
 			}
-		case "netlink":
+		case readerNetlink:
 			if vfstats.DoesPfSupportNetlink(pf) {
 				reader := netlinkReader{vfstats.VfStats(pf)}
 				// Test if netlinkReader can read stats for VF 0
 				if readerHasStats(reader, pf, vfTestID) {
-					log.Printf("%s - using netlink collector", pf)
+					log.Printf("%s - using %s collector", pf, readerNetlink)
 					return reader, nil
 				} else {
-					log.Printf("%s - netlink collector present but no stats found for vf%s", pf, vfTestID)
+					log.Printf("%s - %s collector present but no stats found for vf%s", pf, readerNetlink, vfTestID)
 				}
 			} else {
-				log.Printf("%s does not support netlink collector", pf)
+				log.Printf("%s does not support %s collector", pf, readerNetlink)
 			}
 		default:
 			log.Printf("%s - '%s' collector not supported", pf, collector)

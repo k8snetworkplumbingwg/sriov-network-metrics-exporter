@@ -65,7 +65,7 @@ func (c kubepodCPUCollector) Collect(ch chan<- prometheus.Metric) {
 		desc := prometheus.NewDesc(
 			prometheus.BuildFQName(collectorNamespace, "", "cpu_info"),
 			c.name,
-			[]string{"cpu", "numa_node"}, nil,
+			[]string{labelCPU, labelNumaNode}, nil,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -87,7 +87,7 @@ func (c kubepodCPUCollector) Collect(ch chan<- prometheus.Metric) {
 		desc := prometheus.NewDesc(
 			prometheus.BuildFQName(collectorNamespace, "", c.name),
 			"pod_cpu",
-			[]string{"cpu_id", "numa_node", "uid", "container_id"}, nil,
+			[]string{labelCPUID, labelNumaNode, labelUID, labelContainerID}, nil,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
