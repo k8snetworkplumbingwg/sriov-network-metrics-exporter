@@ -62,7 +62,7 @@ func (c podDevLinkCollector) Collect(ch chan<- prometheus.Metric) {
 					desc := prometheus.NewDesc(
 						prometheus.BuildFQName(collectorNamespace, "", c.name),
 						c.name,
-						[]string{"pciAddr", "dev_type", "pod", "namespace", "container"}, nil,
+						[]string{labelPCIAddr, "dev_type", "pod", "namespace", "container"}, nil,
 					)
 
 					ch <- prometheus.MustNewConstMetric(
